@@ -1,5 +1,5 @@
 plugins {
-    id("java")
+    id("java-library")
 }
 
 group = "com.simra.konsumgandalf"
@@ -7,6 +7,7 @@ version = "0.0.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
+
 }
 
 dependencies {
@@ -22,6 +23,16 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-spatial:6.6.2.Final")
     implementation("org.n52.jackson:jackson-datatype-jts:1.2.10")
     implementation("org.locationtech.jts.io:jts-io-common:1.20.0")
+
+    implementation("org.locationtech.proj4j:proj4j:1.1.3")
+    api("org.geotools:gt-referencing:33.3") {
+        exclude("javax.media", "jai_core")
+    }
+    api("org.geotools:gt-metadata:33.3") {
+        exclude("javax.media", "jai_core")
+    }
+    implementation("de.topobyte:osm4j-core:1.4.1")
+    implementation("de.topobyte:osm4j-pbf:1.4.1")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

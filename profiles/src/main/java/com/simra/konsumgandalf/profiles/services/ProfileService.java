@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -59,7 +60,7 @@ public class ProfileService {
 		AtomicInteger counter = new AtomicInteger(0);
 
 		try {
-			Files.walk(dataPath, 8)
+			Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)
 				.filter(Files::isRegularFile)
 				.filter(FileReaderService::isEntityFile)
 				.map(Path::toString)
@@ -67,7 +68,8 @@ public class ProfileService {
 				.forEach(path -> {
 					CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 						try {
-							_logger.debug("Processing file: " + path.toString() + " on thread: "
+							// Problem
+							_logger.info("Processing file: " + path.toString() + " on thread: "
 									+ Thread.currentThread().getName());
 							Optional<Profile> profile = generateNewProfileEntity(path);
 							bloomFilterProfileExistenceChecker.add(path);

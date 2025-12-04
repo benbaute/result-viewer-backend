@@ -9,6 +9,7 @@ import com.simra.konsumgandalf.osmPlanet.services.RegionService;
 import com.simra.konsumgandalf.profiles.services.AnalyticsProfileService;
 import com.simra.konsumgandalf.profiles.services.ProfileService;
 import com.simra.konsumgandalf.rides.services.RideEntityService;
+import com.simra.konsumgandalf.rides.services.RideService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ import java.io.IOException;
 @Profile("docker")
 @Service
 public class SchedulingService {
+
+	@Autowired
+	private RideService rideService;
 
 	@Autowired
 	private RideEntityService rideEntityService;
@@ -98,6 +102,9 @@ public class SchedulingService {
 	public void init() {
 		_logger.info("SchedulingService started");
 		this.readNewRidesAndCalculateSafetyMetrics();
+		this.rideService.clearRides();
+		this.rideService.loadAllPreviousRides();
+
 		if (analyticsServiceRegionMetrics.isEmpty()) {
 			_logger.info("No region data found, calculating safety metrics for regions");
 			analyticsServiceRegionMetrics.calculateSafetyMetricsRegion();

@@ -1,8 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.repositories;
 
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
-import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.FindNumberOfRidesWithinStreetSegmentInTimePeriodDTO;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.RideEntityDTO;
@@ -10,15 +8,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

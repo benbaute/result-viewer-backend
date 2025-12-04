@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -97,7 +98,7 @@ public class RideEntityService {
 		AtomicInteger counter = new AtomicInteger(0);
 
 		try {
-			Files.walk(dataPath, 8)
+			Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)
 				.filter(Files::isRegularFile)
 				.filter(FileReaderService::isEntityFile)
 				.map(Path::toString)

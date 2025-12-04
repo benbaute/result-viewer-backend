@@ -85,8 +85,9 @@ public class AnalyticsServiceRegionMetrics {
 		List<RegionSafetyMetricsProjection> statesSafetyMetrics = safetyMetricsLineRepository
 			.getRegionSafetyMetricsOfAdminLevel(List.of("4", "6", "9"));
 
-		_logger.info("Safety metrics for regions calculated.");
+		_logger.info("Number of stateSafetyMetrics: {}", statesSafetyMetrics.size());
 		Set<String> seenNames = new HashSet<>();
+		_logger.info("Regions in DB: {}", regionRepository.findAll().stream().map(Region::getName).toList());
 		List<Region> regions = statesSafetyMetrics.stream().filter(p -> seenNames.add(p.getName())).filter(p -> {
 			Optional<Region> region = regionRepository.findByName(p.getName());
 			return region.isEmpty() || region.get().getWay() == null;

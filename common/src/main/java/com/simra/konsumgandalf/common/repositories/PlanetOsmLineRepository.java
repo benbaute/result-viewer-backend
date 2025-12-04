@@ -1,6 +1,7 @@
 package com.simra.konsumgandalf.common.repositories;
 
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
+import org.locationtech.jts.geom.Geometry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public interface PlanetOsmLineRepository extends JpaRepository<PlanetOsmLine, Long> {

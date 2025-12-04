@@ -12,6 +12,7 @@ plugins {
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
     id("io.spring.javaformat") version "0.0.43"
+    id("io.freefair.lombok") version "9.1.0"
     kotlin("jvm")
 }
 
@@ -26,6 +27,15 @@ allprojects {
     version = "0.0.3-SNAPSHOT"
 
     repositories {
+        maven {
+            setUrl("https://repo.osgeo.org/repository/release/")
+        }
+        maven {
+            setUrl("https://mvn.topobyte.de")
+        }
+        maven {
+            setUrl("https://mvn.slimjars.com")
+        }
         mavenLocal()
         mavenCentral()
     }
@@ -40,6 +50,7 @@ subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
     apply(plugin = "org.springframework.boot")
+    apply(plugin = "io.freefair.lombok")
 
     dependencies {
         implementation("org.springframework.boot:spring-boot-starter-web")
@@ -54,8 +65,8 @@ subprojects {
 }
 
 dependencies {
-    implementation(project(":rides"))
     implementation(project(":common"))
+    implementation(project(":rides"))
     implementation(project(":osmPlanet"))
     implementation(project(":profiles"))
 
