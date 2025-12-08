@@ -4,11 +4,8 @@ import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.classes.MatchInformationDate;
 
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.*;
 import org.locationtech.proj4j.*;
-import org.locationtech.jts.geom.LineString;
 
 
 import org.geotools.referencing.GeodeticCalculator;
@@ -82,6 +79,10 @@ public class GeoService {
             length += distance(coordinates.get(i - 1), coordinates.get(i));
         }
         return length;
+    }
+
+    public boolean pointInPolygon(Point point, Polygon polygon) {
+        return polygon.contains(point);
     }
 
 	public double orthodromicDistance(double lat1, double lon1, double lat2, double lon2) {

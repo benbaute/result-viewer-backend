@@ -34,7 +34,6 @@ import java.util.Set;
 public class PlanetOsmLine {
 
 	@Id
-	@GeneratedValue
 	@Column(name = "osm_id", unique = true)
 	private long id;
 

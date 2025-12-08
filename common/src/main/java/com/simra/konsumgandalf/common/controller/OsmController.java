@@ -35,9 +35,15 @@ public class OsmController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/populate")
-    public ResponseEntity<?> populateLineSignalRelations() {
-        osmService.populateLineSignalRelations();
+    @PostMapping("/cluster-polygons")
+    public ResponseEntity<?> generateClusterPolygons() {
+        osmService.createClusterPolygons();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/cluster-polygons-osm-lines")
+    public ResponseEntity<?> populateClusterLineRelations() {
+        osmService.populateClusterLineRelations();
         return ResponseEntity.ok().build();
     }
 
@@ -108,6 +114,21 @@ public class OsmController {
                 trafficSignalClusters.stream()
                         .map(t -> Map.of("type", "Feature", "geometry",
                                 Map.of("type", "Point", "coordinates", List.of(t.getGeom().getX(), t.getGeom().getY())),
+                                "properties", Map.of("id", t.getId(),
+                                        "originalIds", t.getOriginalSignalIds())))
+                        .toList());
+
+        return ResponseEntity.ok(geoJson);
+    }
+
+    @GetMapping("/cluster-polygons")
+    public ResponseEntity<Map<String, Object>> getAllTrafficSignalClusterPolygons() {
+        List<TrafficSignalCluster> trafficSignalClusters = osmService.getAllTrafficSignalClusters();
+
+        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
+                trafficSignalClusters.stream()
+                        .map(t -> Map.of("type", "Feature", "geometry",
+                                t.getPolygon(),
                                 "properties", Map.of("id", t.getId(),
                                         "originalIds", t.getOriginalSignalIds())))
                         .toList());

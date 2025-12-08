@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.common.utils.services;
 
+import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
@@ -27,11 +28,15 @@ public class OsmService {
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
+    private PlanetOsmLineRepository planetOsmLineRepository;
+
+    @Autowired
     private TrafficSignalRepository trafficSignalRepository;
 
     @Autowired
     private TrafficSignalClusterRepository trafficSignalClusterRepository;
 
+    @Transactional
     public int saveTrafficSignals(String filepath) throws IOException {
         List<TrafficSignal> trafficSignals = readOsmFile(filepath);
 
@@ -51,7 +56,7 @@ public class OsmService {
     public List<TrafficSignal> readOsmFile(String filepath) throws IOException {
         InputStream input = new FileInputStream(filepath);
         OsmIterator iterator = new PbfIterator(input, true);
-        Map<Long, List<Long>> nodeToWays = new HashMap<>();
+        Map<Long, List<PlanetOsmLine>> nodeToWays = new HashMap<>();
         List<TrafficSignal> trafficSignals = new ArrayList<>();
         for (EntityContainer container : iterator) {
             switch (container.getType()) {
@@ -73,9 +78,12 @@ public class OsmService {
                 case Way:
                     OsmWay way = (OsmWay) container.getEntity();
                     long wayId = way.getId();
-                    for (int i = 0; i < way.getNumberOfNodes(); i++) {
-                        long nodeId = way.getNodeId(i);
-                        nodeToWays.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(wayId);
+                    Optional<PlanetOsmLine> pLine = planetOsmLineRepository.findById(wayId);
+                    if (pLine.isPresent()) {
+                        for (int i = 0; i < way.getNumberOfNodes(); i++) {
+                            long nodeId = way.getNodeId(i);
+                            nodeToWays.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(pLine.get());
+                        }
                     }
                     break;
                 case Relation:
@@ -84,7 +92,13 @@ public class OsmService {
         }
         for (TrafficSignal signal : trafficSignals) {
             long signalId = signal.getId();
-            List<Long> wayIds = nodeToWays.get(signalId);
+            List<PlanetOsmLine> ways = nodeToWays.get(signalId);
+
+            if (ways != null) {
+                for (PlanetOsmLine way : ways) {
+                    signal.addOsmLine(way);
+                }
+            }
         }
         return trafficSignals;
     }
@@ -95,8 +109,13 @@ public class OsmService {
     }
 
     @Transactional
-    public void populateLineSignalRelations() {
-        trafficSignalRepository.populateLineSignalRelations();
+    public void createClusterPolygons() {
+        trafficSignalClusterRepository.updateClusterPolygons();
+    }
+
+    @Transactional
+    public void populateClusterLineRelations() {
+        trafficSignalClusterRepository.populateClusterLineRelations();
     }
 
     public List<TrafficSignal> getAllTrafficSignals() {
@@ -104,6 +123,14 @@ public class OsmService {
     }
 
     public List<TrafficSignal> findTrafficSignalsByOsmLineId(Long osmLineId) { return trafficSignalRepository.findByOsmLineId(osmLineId); }
+
+    public List<TrafficSignalCluster> findTrafficSignalClustersByTrafficSignalId(Long trafficSignalId) {
+        return trafficSignalClusterRepository.findByTrafficSignalId(trafficSignalId);
+    }
+
+    public List<TrafficSignalCluster> findTrafficSignalClustersByOsmLineId(Long osmLineId) {
+        return trafficSignalClusterRepository.findByOsmLineId(osmLineId);
+    }
 
     public double getDistanceOsmLineTrafficSignal(Long osmLineId, Long trafficSignalId) {
         return trafficSignalRepository.getDistanceOsmLineTrafficSignal(osmLineId, trafficSignalId);

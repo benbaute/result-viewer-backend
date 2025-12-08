@@ -280,6 +280,7 @@ public class RideService {
                 Coordinate coordinate = new Coordinate((double) matchedPoint.get("lon"),
                         (double) matchedPoint.get("lat"));
                 matchedPoint.put("coordinate", coordinate);
+                matchedPoint.put("point", geometryFactory.createPoint(coordinate));
 			}
 		}
 
@@ -290,16 +291,8 @@ public class RideService {
                 Optional<PlanetOsmLine> pLine = planetOsmLineRepository.findById(Long.valueOf(wayId));
                 if (pLine.isPresent()) {
                     edge.put("osm_line", pLine.get());
-                    List<TrafficSignal> trafficSignals = osmService.findTrafficSignalsByOsmLineId(Long.valueOf(wayId));
-                    if (!trafficSignals.isEmpty()) {
-                        // double distance = osmService.getDistanceOsmLineTrafficSignal(Long.valueOf(wayId), trafficSignal.getId());
-                        // TODO: merge signals
-                        // TODO: kreuzungspassierzeiten berechnen auf Basis osm Ids,
-                        // Wenn Distanz Signal Matched Point kleiner als Threshold, Kreuzungsanfang
-                        // Krezungsende, wenn osm line von Länge größer als 100 meter
-                        // Distanz kleiner für kleinere Straßen? Wenn residential street kleiner als 50 meter?
-                        edge.put("traffic_signals", trafficSignals);
-                    }
+                    List<TrafficSignalCluster> clusters = osmService.findTrafficSignalClustersByOsmLineId(Long.valueOf(wayId));
+                    edge.put("traffic_signal_clusters", clusters);
                 }
                 else {
                     throw new RuntimeException("Could not find line with id " + wayId);
@@ -326,6 +319,7 @@ public class RideService {
                 Integer wayId = (Integer) edge.get("way_id");
                 matchedPoint.put("way_id", wayId);
                 matchedPoint.put("osm_line", edge.get("osm_line"));
+                matchedPoint.put("traffic_signal_clusters", edge.get("traffic_signal_clusters"));
                 if (!wayId.equals(currentWayId)) {
                     currentWayId = wayId;
                     if (!currentPoints.isEmpty()) {
@@ -380,55 +374,53 @@ public class RideService {
             }
         }
 
+        for (int i = 1; i < sortedPoints.size()-1; i++) {
+            List<HashMap<String, Object>> current = sortedPoints.get(i);
+            if (current.getFirst().get("way_id") == null) {
+                List<TrafficSignalCluster> prev = (List<TrafficSignalCluster>)  sortedPoints.get(i-1).getLast().get("traffic_signal_clusters");
+                List<TrafficSignalCluster> next = (List<TrafficSignalCluster>)  sortedPoints.get(i+1).getFirst().get("traffic_signal_clusters");
+                List<TrafficSignalCluster> combined = new ArrayList<>();
+                combined.addAll(prev);
+                combined.addAll(next);
+                for (HashMap<String, Object> p : current) {
+                    p.put("traffic_signal_clusters", combined);
+                }
+            }
+        }
+
         List<HashMap<String, Object>> unsortedPoints = new ArrayList<>();
         for (List<HashMap<String, Object>> sortedPoint : sortedPoints) {
             unsortedPoints.addAll(sortedPoint);
         }
 
-        boolean inCrossing = false;
-        String highway = "default";
-        List<TrafficSignal> trafficSignals = new ArrayList<>();
+        boolean inIntersection = false;
         for (int i = 0; i < unsortedPoints.size(); i++) {
             HashMap<String, Object> matchedPoint = unsortedPoints.get(i);
-            Coordinate coordinate = (Coordinate) matchedPoint.get("coordinate");
-            Double smallestDistance = getSmallestDistanceToTrafficSignals(trafficSignals, coordinate);
-
-            if (matchedPoint.get("osm_line") != null) {
-                int edgeIndex = (int) matchedPoint.get("edge_index");
-                HashMap<String, Object> edge = edges.get(edgeIndex);
-                PlanetOsmLine osmLine = (PlanetOsmLine) edge.get("osm_line");
-                highway = osmLine.getHighway();
-                if (edge.get("traffic_signals") != null) {
-                    List<TrafficSignal> currentTrafficSignals = (List<TrafficSignal>) edge.get("traffic_signals");
-                    Double smallestDistanceToCurrentTrafficSignals = getSmallestDistanceToTrafficSignals(currentTrafficSignals, coordinate);
-                    if (smallestDistanceToCurrentTrafficSignals != null && (smallestDistance == null
-                            || smallestDistanceToCurrentTrafficSignals <= smallestDistance)) {
-                        trafficSignals = currentTrafficSignals;
-                        smallestDistance = smallestDistanceToCurrentTrafficSignals;
-                    }
-                    matchedPoint.put("traffic_signals", currentTrafficSignals);
-                }
-            }
-            if (inCrossing) {
-                if (smallestDistance != null && smallestDistance > distanceSignalOnHighway(highway)) {
-                    inCrossing = false;
-                } else {
+            Point point = (Point) matchedPoint.get("point");
+            List<TrafficSignalCluster> clusters = (List<TrafficSignalCluster>) matchedPoint.get("traffic_signal_clusters");
+            for (TrafficSignalCluster cluster : clusters) {
+                if (geoService.pointInPolygon(point, cluster.getPolygon())) {
                     matchedPoint.put("intersection", true);
                 }
+            }
+            if (matchedPoint.get("intersection") != null) {
+                if (!inIntersection && i > 0) {
+                    HashMap<String, Object> prevPoint = unsortedPoints.get(i-1);
+                    prevPoint.put("intersection", true);
+                }
+                inIntersection = true;
             } else {
-                if (smallestDistance != null && smallestDistance < distanceSignalOnHighway(highway)) {
-                    inCrossing = true;
+                if (inIntersection) {
                     matchedPoint.put("intersection", true);
                 }
+                inIntersection = false;
             }
-            // TODO: What about points before intersection???
         }
 
         List<List<HashMap<String, Object>>> allIntersections = new ArrayList<>();
         List<HashMap<String, Object>> currentIntersections = new ArrayList<>();
-        for (int i = 0; i < sortedPoints.size(); i++) {
-            for (int j = 0; j < sortedPoints.get(i).size(); j++) {
-                HashMap<String, Object> point = sortedPoints.get(i).get(j);
+        for (List<HashMap<String, Object>> sortedPoint : sortedPoints) {
+            for (HashMap<String, Object> point : sortedPoint) {
                 if (point.get("intersection") != null) {
                     currentIntersections.add(point);
                 } else {
@@ -446,33 +438,6 @@ public class RideService {
             // If an intersection is not finished at the end of the ride, it has not to be removed, as only
             // complete intersections are added.
             allIntersections.removeFirst();
-        }
-
-        for (int i = allIntersections.size() - 1; i >= 1; i--) {
-            // merge intersections based on distance
-            List<HashMap<String, Object>> currentIntersection = allIntersections.get(i);
-            List<HashMap<String, Object>> previousIntersection = allIntersections.get(i-1);
-            HashMap<String, Object> firstPoint = currentIntersection.getFirst();
-            HashMap<String, Object> lastPoint = previousIntersection.getLast();
-            Coordinate coordinateFirst = (Coordinate) firstPoint.get("coordinate");
-            Coordinate coordinateLast = (Coordinate) lastPoint.get("coordinate");
-
-            String highwayFirst = "default";
-            String highwayLast = "default";
-            if (firstPoint.get("osm_line") != null) {
-                PlanetOsmLine osmLine = (PlanetOsmLine) firstPoint.get("osm_line");
-                highwayFirst = osmLine.getHighway();
-            }
-            if (lastPoint.get("osm_line") != null) {
-                PlanetOsmLine osmLine = (PlanetOsmLine) lastPoint.get("osm_line");
-                highwayLast = osmLine.getHighway();
-            }
-            double distance = geoService.distance(coordinateFirst, coordinateLast);
-            if (distance < distanceMerge(highwayFirst, highwayLast)) {
-                System.out.println("Merged");
-                previousIntersection.addAll(currentIntersection);
-                allIntersections.remove(i);
-            }
         }
 
         for (List<HashMap<String, Object>> intersection : allIntersections) {
@@ -505,9 +470,8 @@ public class RideService {
         for (int i = 0; i < sortedPoints.size(); i++) {
             for (int j = 0; j < sortedPoints.get(i).size(); j++) {
                 HashMap<String, Object> point = sortedPoints.get(i).get(j);
-                Coordinate coord = new Coordinate((double) point.get("lon"), (double) point.get("lat"));
                 MatchedPoint mP = new MatchedPoint();
-                mP.setGeom(geometryFactory.createPoint(coord));
+                mP.setGeom((Point) point.get("point"));
                 mP.setEdgeId(i);
                 mP.setPointInEdgeId(j);
                 mP.setRide(ride);
@@ -565,6 +529,7 @@ public class RideService {
         }
 
         _logger.info("Size of sorted: {}", sortedPoints.size());
+
 	}
 
     private int distanceSignalOnHighway(String highway) {

@@ -6,7 +6,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 
+
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -19,11 +22,23 @@ public class TrafficSignal {
     @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
     private Point geom;
 
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "traffic_signal__planet_osm_line",
+            joinColumns = @JoinColumn(name = "traffic_signal_id"),
+            inverseJoinColumns = @JoinColumn(name = "osm_line_id")
+    )
+    private Set<PlanetOsmLine> osmLines = new HashSet<>();
+
 	public TrafficSignal() {
 	}
 
     public TrafficSignal(long id, Point point) {
         this.id = id;
         this.geom = point;
+    }
+
+    public void addOsmLine(PlanetOsmLine osmLine) {
+        osmLines.add(osmLine);
     }
 }

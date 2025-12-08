@@ -19,25 +19,6 @@ public interface TrafficSignalRepository extends JpaRepository<TrafficSignal, Lo
 			""")
     List<Long> getTrafficSignalIds();
 
-    @Modifying
-    @Transactional
-    @Query(value = """
-WITH traffic_signal_projected AS (
-    SELECT id, ST_Transform(geom, 25833) AS geom_utm
-    FROM traffic_signal
-),
-planet_osm_line_projected AS (
-    SELECT osm_id, ST_Transform(way, 25833) AS geom_utm
-    FROM planet_osm_line
-)
-INSERT INTO traffic_signal__planet_osm_line (osm_line_id, traffic_signal_id)
-SELECT l.osm_id, s.id
-FROM planet_osm_line_projected l
-JOIN traffic_signal_projected s
-ON st_dwithin(l.geom_utm, s.geom_utm, 20);
-""", nativeQuery = true)
-    void populateLineSignalRelations();
-
 
     @Query(value = """
 WITH traffic_signal_projected AS (

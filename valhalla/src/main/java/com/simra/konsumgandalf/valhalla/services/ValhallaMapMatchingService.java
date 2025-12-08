@@ -32,7 +32,7 @@ public class ValhallaMapMatchingService extends ValhallaService {
         "snap_prevention", List.of("motorway", "trunk"),
         "trace_options", Map.of(
             "turn_penalty_factor", 300,
-            "search_radius", 15,
+            "search_radius", 25,
             "breakage_distance", 50,
             "interpolation_distance", 10
         )
