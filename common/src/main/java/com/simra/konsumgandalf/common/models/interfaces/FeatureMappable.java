@@ -1,0 +1,19 @@
+package com.simra.konsumgandalf.common.models.interfaces;
+
+import java.util.HashMap;
+import java.util.Map;
+import org.locationtech.jts.geom.Geometry;
+
+public interface FeatureMappable {
+    Geometry getGeom();
+
+    Map<String, Object> getProperties();
+
+    default Map<String, Object> getFeatureMap() {
+        Map<String, Object> feature = new HashMap<>();
+        feature.put("type", "Feature");
+        feature.put("geometry", getGeom());
+        feature.put("properties", getProperties());
+        return feature;
+    }
+}
