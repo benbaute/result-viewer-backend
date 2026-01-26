@@ -1,132 +1,98 @@
 package com.simra.konsumgandalf.rides.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.simra.konsumgandalf.common.models.entities.*;
-import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
+import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
-import com.simra.konsumgandalf.rides.records.EdgeSpeedStats;
-import com.simra.konsumgandalf.rides.records.IntersectionDelayGroup;
-import com.simra.konsumgandalf.rides.services.RideEntityService;
 import com.simra.konsumgandalf.rides.services.RideService;
-import org.geolatte.geom.jts.JTS;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.proj4j.*;
-import org.locationtech.jts.geom.LineString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
-@RequestMapping("/ride")
+@RequestMapping("/intersections")
 public class RideController {
-    @Autowired
-    private PlanetOsmLineRepository planetOsmLineRepository;
-
     @Autowired
     private RideService rideService;
 
-    @Autowired
-    private GeoService geoService;
-
 	@GetMapping("/{rideId}/points")
 	public ResponseEntity<Map<String, Object>> getRidePointsAsGeoJson(@PathVariable Long rideId) {
-		List<RidePoint> points = rideService.getRidePoints(rideId);
-
-		Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-				points.stream()
-					.map(p -> Map.of("type", "Feature", "geometry",
-							Map.of("type", "Point", "coordinates", List.of(p.getGeom().getX(), p.getGeom().getY())),
-							"properties", Map.of("timestamp", p.getTimestamp(),
-                                    "path", p.getRide().getPath(),
-                                    "ride_id", rideId)))
-					.toList());
-
-		return ResponseEntity.ok(geoJson);
+		return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getRidePoints(rideId)));
 	}
 
 	@GetMapping("/{rideId}/matched_points")
 	public ResponseEntity<Map<String, Object>> getMatchedPointsAsGeoJson(@PathVariable Long rideId) {
-		List<MatchedPoint> points = rideService.getMatchedPoints(rideId);
-		Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-				points.stream()
-					.map(p -> Map.of("type", "Feature", "geometry",
-							Map.of("type", "Point", "coordinates", List.of(p.getGeom().getX(), p.getGeom().getY())),
-                                    "properties", Map.of("timestamp", p.getTimestamp(),
-                                            "edge_id", p.getEdgeId(), "point_in_edge_id", p.getPointInEdgeId(),
-                                    "way_id", p.getLine() != null ? p.getLine().getId() : "null",
-                                    "inIntersection", p.getInIntersection(),
-                                    "ride_id", rideId)))
-					.toList());
-
-		return ResponseEntity.ok(geoJson);
+		return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getMatchedPoints(rideId)));
 	}
 
-	@GetMapping("/{rideId}/edges")
-	public ResponseEntity<Map<String, Object>> getEdgesAsGeoJson(@PathVariable Long rideId) {
-		List<Edge> edges = rideService.getEdges(rideId);
-		Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features", edges.stream().map(e -> {
-            List<List<Double>> coordinates = geoService.getLineCoordinates(e.getLine()).stream().map(
-                    c -> List.of(c.getX(), c.getY())).toList();
-			return Map.of("type", "Feature", "geometry", Map.of("type", "LineString", "coordinates", coordinates),
-					"properties",
-					Map.of( "length", e.getLength(), "way_id", e.getLine().getId(),
-                            "direction", e.getDirection() != null ? e.getDirection() : "null", "speed", e.getSpeed(),
-                            "startTime", e.getStartTime(),
-                            "ride_id", rideId));
-		}).toList());
 
-		return ResponseEntity.ok(geoJson);
-	}
-
-    @GetMapping("/{rideId}/intersection_delays")
-    public ResponseEntity<Map<String, Object>> getIntersectionDelaysAsGeoJson(@PathVariable Long rideId) {
-        List<IntersectionDelay> intersectionDelays = rideService.getIntersectionDelays(rideId);
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features", intersectionDelays.stream().map(i -> {
-            return Map.of("type", "Feature", "geometry", i.getGeom(),
-                    "properties",
-                    Map.of( "start_osm_id", i.getStartLine() != null ? i.getStartLine().getId() : "null",
-                            "end_osm_id", i.getEndLine() != null ? i.getEndLine().getId() : "null",
-                            "start_time", i.getStartTime(),
-                            "end_time", i.getEndTime(),
-                            "duration", i.getDuration(),
-                            "length", i.getLength(),
-                            "speed", i.getSpeed(),
-                            "ride_id", rideId));
-        }).toList());
-
-        return ResponseEntity.ok(geoJson);
+    @GetMapping("/{rideId}/intersection_nodes")
+    public ResponseEntity<Map<String, Object>> getIntersectionNodesAsGeoJson(@PathVariable Long rideId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionNodes(rideId)));
     }
 
-    @GetMapping("/intersection_delays")
-    public ResponseEntity<Map<String, Object>> getIntersectionDelaysAsGeoJson() {
-        ObjectMapper mapper = new ObjectMapper();
-        List<IntersectionDelayGroup> intersectionDelays = rideService.aggregateDelays();
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features", intersectionDelays.stream().map(i -> {
-            try {
-                return Map.of("type", "Feature", "geometry", mapper.readValue(i.getExampleGeom(), Object.class),
-                        "properties",
-                        Map.of( "start_osm_id", i.getStartLineId() != null ? i.getStartLineId() : "null",
-                                "end_osm_id", i.getEndLineId() != null ? i.getEndLineId() : "null",
-                                "count", i.getCount(),
-                                "avg_length", i.getAvgLength(),
-                                "avg_duration", i.getAvgDuration(),
-                                "max_duration", i.getMaxDuration(),
-                                "avg_speed", i.getAvgSpeed()));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }).toList());
+    @GetMapping("/{rideId}/intersection_edges")
+    public ResponseEntity<Map<String, Object>> getIntersectionEdgeAsGeoJson(@PathVariable Long rideId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionEdge(rideId)));
+    }
 
-        return ResponseEntity.ok(geoJson);
+    @GetMapping("/intersection_nodes")
+    public ResponseEntity<Map<String, Object>> getIntersectionNodesAsGeoJson(
+            @RequestParam Long trafficSignalClusterId,
+            @RequestParam(required = false) Long startOsmId,
+            @RequestParam(required = false) Long endOsmId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(
+                rideService.getIntersectionNodes(trafficSignalClusterId, startOsmId, endOsmId)));
+    }
+
+    @GetMapping("/intersection_nodes/aggregate")
+    public ResponseEntity<Map<String, Object>> getIntersectionNodesAggregateAsGeoJson(
+            @RequestParam(required = false) Long trafficSignalClusterId,
+            @RequestParam(required = false) Long count,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String streetNames) {
+
+        List<IntersectionNodeAggregate> intersectionNodes = rideService.aggregateNodes(trafficSignalClusterId, count, region, streetNames);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(intersectionNodes));
+    }
+
+    @GetMapping("/intersection_nodes/streetNames")
+    public List<String> getHighwayNames(
+            @RequestParam(required = false) Long trafficSignalClusterId,
+            @RequestParam(required = false) Long count,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String streetNames) {
+        return rideService.findAllStreetNamesIncludingStringIntersectionNode(trafficSignalClusterId, count, region, streetNames);
+    }
+
+    @GetMapping("/intersection_edges")
+    public ResponseEntity<Map<String, Object>> getIntersectionEdgesAsGeoJson(
+            @RequestParam(required = false) Long prevOsmId,
+            @RequestParam(required = false) Long osmId,
+            @RequestParam(required = false) Long nextOsmId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(
+                rideService.getIntersectionEdge(prevOsmId, osmId, nextOsmId)));
+    }
+
+    @GetMapping("/intersection_edges/aggregate")
+    public ResponseEntity<Map<String, Object>> getIntersectionEdgesAsGeoJson(
+            @RequestParam(required = false) Long count,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String name) {
+
+        List<IntersectionEdgeAggregate> intersectionEdges = rideService.aggregateEdges(count, region, name);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(intersectionEdges));
+    }
+
+    @GetMapping("/intersection_edges/streetNames")
+    public List<String> getEdgeHighwayNames(
+            @RequestParam(required = false) Long count,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String name) {
+        return rideService.findAllStreetNamesIntersectionEdge(count, region, name);
     }
 
 	@GetMapping("/ids")
@@ -135,28 +101,25 @@ public class RideController {
 		return ResponseEntity.ok(ids);
 	}
 
-    @GetMapping("/edge-speeds")
-    public ResponseEntity<Map<String, Object>> getAverageSpeeds() {
-        List<EdgeSpeedStats> edgeSpeeds = rideService.getAverageSpeeds();
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features", edgeSpeeds.stream().map(e -> {
-
-            Optional<PlanetOsmLine> pLine = planetOsmLineRepository.findById(e.osmId());
-            List<List<Double>> coordinates = List.of();
-            if (pLine.isPresent()) {
-                coordinates = geoService.getLineCoordinates(pLine.get()).stream().map(
-                        c -> List.of(c.getX(), c.getY())).toList();
-            }
-
-            return Map.of("type", "Feature", "geometry", Map.of("type", "LineString", "coordinates", coordinates),
-                    "properties",
-                    Map.of( "osm_id", e.osmId(), "avg_speed", e.avgSpeed(), "count", e.count()));
-        }).toList());
-        return ResponseEntity.ok(geoJson);
-    }
-
     @GetMapping("/rideIds/{osmLineId}")
     public ResponseEntity<List<Long>> findByOsmLineId(@PathVariable Long osmLineId) {
         List<Long> rideIds = rideService.findByOsmLineId(osmLineId);
         return ResponseEntity.ok(rideIds);
+    }
+
+    @GetMapping("/regions/aggregate")
+    public ResponseEntity<Map<String, Object>> getAggregateIntersectionDataPerRegion(
+            @RequestParam(required = false) String region
+    ) {
+        List<RegionAggregate> regions = rideService.aggregateIntersectionDataPerRegion(region);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(regions));
+    }
+
+    @GetMapping("/regions/polygon")
+    public ResponseEntity<Map<String, Object>> getRegionAsGeoJson(
+            @RequestParam(required = false) String region
+    ) {
+        List<Region> regions = rideService.findRegionByName(region);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(regions));
     }
 }

@@ -12,6 +12,7 @@ repositories {
 dependencies {
     implementation(project(":common"))
     implementation(project(":valhalla"))
+    implementation(project(":osmPlanet"))
 
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-rest")

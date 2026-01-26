@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.entities.MethodRun;
 import com.simra.konsumgandalf.common.models.entities.RidePoint;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
+import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.common.utils.services.OsmService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,22 @@ public class OsmController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/merge-cluster")
+    public ResponseEntity<?> mergeCluster() {
+        try {
+            int changed = osmService.mergeClusters();
+            return ResponseEntity.ok().body(Map.of("merged", changed));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getStackTrace()));
+        }
+    }
+
+    @PostMapping("/cluster-names")
+    public ResponseEntity<?> generateClusterNames() {
+        osmService.updateNames();
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/cluster-polygons")
     public ResponseEntity<?> generateClusterPolygons() {
         osmService.createClusterPolygons();
@@ -44,6 +61,16 @@ public class OsmController {
     @PostMapping("/cluster-polygons-osm-lines")
     public ResponseEntity<?> populateClusterLineRelations() {
         osmService.populateClusterLineRelations();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/cluster-complete")
+    public ResponseEntity<?> generateClusterComplete() {
+        generateClusters();
+        mergeCluster();
+        generateClusterNames();
+        generateClusterPolygons();
+        populateClusterLineRelations();
         return ResponseEntity.ok().build();
     }
 
@@ -80,59 +107,27 @@ public class OsmController {
 
     @GetMapping("/traffic-signals")
     public ResponseEntity<Map<String, Object>> getAllTrafficSignals() {
-        List<TrafficSignal> trafficSignals = osmService.getAllTrafficSignals();
-
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-                trafficSignals.stream()
-                        .map(t -> Map.of("type", "Feature", "geometry",
-                                Map.of("type", "Point", "coordinates", List.of(t.getGeom().getX(), t.getGeom().getY())),
-                                "properties", Map.of("id", t.getId())))
-                        .toList());
-
-        return ResponseEntity.ok(geoJson);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.getAllTrafficSignals()));
     }
 
     @GetMapping("/traffic-signals/{osmLineId}")
     public ResponseEntity<Map<String, Object>> findTrafficSignalsByOsmLineId(@PathVariable Long osmLineId) {
-        List<TrafficSignal> trafficSignals = osmService.findTrafficSignalsByOsmLineId(osmLineId);
-
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-                trafficSignals.stream()
-                        .map(t -> Map.of("type", "Feature", "geometry",
-                                Map.of("type", "Point", "coordinates", List.of(t.getGeom().getX(), t.getGeom().getY())),
-                                "properties", Map.of("id", t.getId())))
-                        .toList());
-
-        return ResponseEntity.ok(geoJson);
+        return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.findTrafficSignalsByOsmLineId(osmLineId)));
     }
 
-    @GetMapping("/cluster")
-    public ResponseEntity<Map<String, Object>> getAllTrafficSignalClusters() {
-        List<TrafficSignalCluster> trafficSignalClusters = osmService.getAllTrafficSignalClusters();
-
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-                trafficSignalClusters.stream()
-                        .map(t -> Map.of("type", "Feature", "geometry",
-                                Map.of("type", "Point", "coordinates", List.of(t.getGeom().getX(), t.getGeom().getY())),
-                                "properties", Map.of("id", t.getId(),
-                                        "originalIds", t.getOriginalSignalIds())))
-                        .toList());
-
-        return ResponseEntity.ok(geoJson);
+    @GetMapping("/traffic-signals/cluster/{trafficSignalClusterId}")
+    public ResponseEntity<Map<String, Object>> findTrafficSignalsByTrafficSignalClusterId(@PathVariable Long trafficSignalClusterId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.findTrafficSignalsByTrafficSignalClusterId(trafficSignalClusterId)));
     }
 
     @GetMapping("/cluster-polygons")
     public ResponseEntity<Map<String, Object>> getAllTrafficSignalClusterPolygons() {
-        List<TrafficSignalCluster> trafficSignalClusters = osmService.getAllTrafficSignalClusters();
+        return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.getAllTrafficSignalClusters()));
+    }
 
-        Map<String, Object> geoJson = Map.of("type", "FeatureCollection", "features",
-                trafficSignalClusters.stream()
-                        .map(t -> Map.of("type", "Feature", "geometry",
-                                t.getPolygon(),
-                                "properties", Map.of("id", t.getId(),
-                                        "originalIds", t.getOriginalSignalIds())))
-                        .toList());
-
-        return ResponseEntity.ok(geoJson);
+    @GetMapping("/cluster-polygons/{trafficSignalClusterId}")
+    public ResponseEntity<Map<String, Object>> getTrafficSignalClusterPolygon(@PathVariable Long trafficSignalClusterId) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(
+                osmService.findTrafficSignalClustersByTrafficSignalClusterId(trafficSignalClusterId)));
     }
 }

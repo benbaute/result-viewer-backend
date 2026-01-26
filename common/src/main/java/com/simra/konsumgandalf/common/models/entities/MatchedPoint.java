@@ -1,19 +1,22 @@
 package com.simra.konsumgandalf.common.models.entities;
 
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Contains metadata for a single ride.
+ * Matched (with Valhalla) GPS point for a ride.
  */
 @Getter
 @Setter
 @Entity
-public class MatchedPoint {
+public class MatchedPoint implements FeatureMappable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,6 +39,12 @@ public class MatchedPoint {
 
     private int pointInEdgeId;
 
+    private Double distanceAlongEdge;
+
+    private Double distanceFromTracePoint;
+
+    private int stops;
+
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
@@ -46,17 +55,26 @@ public class MatchedPoint {
 	@Transient
 	private int edgeIndex;
 
-	@Transient
-	private double distanceAlongEdge;
-
-	@Transient
-	private double distanceFromTracePoint;
-
 	// --- Constructor ---
 	public MatchedPoint() {
 	}
 
     public boolean getInIntersection() {
         return this.inIntersection;
+    }
+
+    @Override
+    public Map<String, Object> getProperties() {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("timestamp", this.getTimestamp());
+        properties.put("edge_id", this.getEdgeId());
+        properties.put("point_in_edge_id", this.getPointInEdgeId());
+        properties.put("way_id", this.getLine() != null ? this.getLine().getId() : "null");
+        properties.put("inIntersection", this.getInIntersection());
+        properties.put("ride_id", this.ride.getId());
+        properties.put("distance_along_edge", this.getDistanceAlongEdge());
+        properties.put("distance_from_trace_point", this.getDistanceFromTracePoint());
+        properties.put("stops", this.getStops());
+        return properties;
     }
 }

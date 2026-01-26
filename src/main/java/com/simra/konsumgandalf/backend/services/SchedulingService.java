@@ -102,8 +102,8 @@ public class SchedulingService {
 	public void init() {
 		_logger.info("SchedulingService started");
 		this.readNewRidesAndCalculateSafetyMetrics();
-		this.rideService.clearRides();
-		this.rideService.loadAllPreviousRides();
+		//this.rideService.clearRides();
+		//this.rideService.loadAllPreviousRides();
 
 		if (analyticsServiceRegionMetrics.isEmpty()) {
 			_logger.info("No region data found, calculating safety metrics for regions");

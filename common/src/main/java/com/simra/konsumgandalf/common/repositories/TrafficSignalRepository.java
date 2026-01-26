@@ -48,4 +48,13 @@ ON s.id = l.traffic_signal_id
 WHERE l.osm_line_id = :osmLineId
 """, nativeQuery = true)
     List<TrafficSignal> findByOsmLineId(Long osmLineId);
+
+    @Query(value = """
+SELECT s.*
+FROM traffic_signal s
+JOIN traffic_signal_cluster c
+ON s.id = ANY(c.original_signal_ids)
+WHERE :trafficSignalClusterId = c.id
+""", nativeQuery = true)
+    List<TrafficSignal> findByTrafficSignalClusterId(Long trafficSignalClusterId);
 }

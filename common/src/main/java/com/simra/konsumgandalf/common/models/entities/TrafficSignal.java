@@ -1,20 +1,18 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Setter
 @Entity
-public class TrafficSignal {
+public class TrafficSignal implements FeatureMappable {
 
 	@Id
 	private Long id;
@@ -22,7 +20,7 @@ public class TrafficSignal {
     @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
     private Point geom;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @ManyToMany
     @JoinTable(
             name = "traffic_signal__planet_osm_line",
             joinColumns = @JoinColumn(name = "traffic_signal_id"),
@@ -32,7 +30,6 @@ public class TrafficSignal {
 
 	public TrafficSignal() {
 	}
-
     public TrafficSignal(long id, Point point) {
         this.id = id;
         this.geom = point;
@@ -40,5 +37,12 @@ public class TrafficSignal {
 
     public void addOsmLine(PlanetOsmLine osmLine) {
         osmLines.add(osmLine);
+    }
+
+    @Override
+    public Map<String, Object> getProperties() {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("id", this.getId());
+        return properties;
     }
 }

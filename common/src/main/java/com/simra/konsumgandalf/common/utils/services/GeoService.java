@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.classes.MatchInformationDate;
 
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import org.locationtech.jts.geom.*;
 import org.locationtech.proj4j.*;
 
@@ -14,10 +15,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class GeoService {
@@ -26,6 +24,19 @@ public class GeoService {
     private static final CoordinateReferenceSystem sourceCRS = crsFactory.createFromName("EPSG:3857");
     private static final CoordinateReferenceSystem targetCRS = crsFactory.createFromName("EPSG:4326");
     private static final CoordinateTransform transform = ctFactory.createTransform(sourceCRS, targetCRS);
+
+    public static <T extends FeatureMappable>
+    Map<String, Object> getFeatureCollection(List<T> elements) {
+        List<Map<String, Object>> features = elements.stream()
+                .map(FeatureMappable::getFeatureMap)
+                .toList();
+
+        Map<String, Object> featureCollection = new HashMap<>();
+        featureCollection.put("type", "FeatureCollection");
+        featureCollection.put("features", features);
+
+        return featureCollection;
+    }
 
     public static Geometry transformLine(Geometry geom) {
         GeometryFactory geometryFactory = geom.getFactory();

@@ -1,33 +1,49 @@
 package com.simra.konsumgandalf.common.models.entities;
 
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Setter
 @Entity
-public class TrafficSignalCluster {
+public class TrafficSignalCluster implements FeatureMappable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-    @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
-    private Point geom;
+    @ManyToMany
+    @JoinTable(
+            name = "traffic_signal_cluster__planet_osm_line",
+            joinColumns = @JoinColumn(name = "traffic_signal_cluster_id"),
+            inverseJoinColumns = @JoinColumn(name = "osm_id")
+    )
+    private Set<PlanetOsmLine> osmLines = new HashSet<>();
 
     @Column(columnDefinition = "geometry(Polygon,4326)")
-    private Polygon polygon;
+    private Polygon geom;
 
     @Column(columnDefinition = "bigint[]")
     private List<Long> originalSignalIds;
 
+    @Column(columnDefinition = "varchar(255)[]")
+    private List<String> osmLinesName;
+
 	public TrafficSignalCluster() {
 	}
+
+    @Override
+    public Map<String, Object> getProperties() {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("id", this.getId());
+        properties.put("originalIds", this.getOriginalSignalIds());
+        properties.put("osmLinesName", this.getOsmLinesName());
+        return properties;
+    }
 }

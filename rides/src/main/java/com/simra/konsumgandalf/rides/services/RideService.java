@@ -1,25 +1,21 @@
 package com.simra.konsumgandalf.rides.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simra.konsumgandalf.common.logging.LogExecutionTime;
-import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.classes.MatchInformationDate;
 import com.simra.konsumgandalf.common.models.classes.RideLoc;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.*;
-import com.simra.konsumgandalf.common.models.enums.IncidentType;
-import com.simra.konsumgandalf.common.models.maps.IxFunctionToParticipantTypeMap;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
 import com.simra.konsumgandalf.common.utils.services.FileReaderService;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.common.utils.services.OsmService;
-import com.simra.konsumgandalf.rides.records.EdgeSpeedStats;
-import com.simra.konsumgandalf.rides.records.IntersectionDelayGroup;
+import com.simra.konsumgandalf.osmPlanet.repositories.RegionRepository;
 import com.simra.konsumgandalf.rides.repositories.*;
-import com.simra.konsumgandalf.valhalla.models.ValhallaTraceAttributesResponse;
 import com.simra.konsumgandalf.valhalla.services.ValhallaMapMatchingService;
-import com.simra.konsumgandalf.valhalla.services.ValhallaTraceAttributesService;
 import jakarta.transaction.Transactional;
 import org.locationtech.jts.geom.*;
 import org.slf4j.Logger;
@@ -27,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.nio.file.FileVisitOption;
@@ -36,7 +33,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.simra.konsumgandalf.common.constants.AppDates.*;
@@ -65,11 +61,14 @@ public class RideService {
 	@Autowired
 	private MatchedPointRepository matchedPointRepository;
 
-	@Autowired
-	private EdgeRepository edgeRepository;
+    @Autowired
+    private IntersectionNodeRepository intersectionNodeRepository;
 
     @Autowired
-    private IntersectionDelayRepository intersectionDelayRepository;
+    private IntersectionEdgeRepository intersectionEdgeRepository;
+
+    @Autowired
+    private RegionRepository regionRepository;
 
 	@Autowired
 	private GeoService geoService;
@@ -114,9 +113,10 @@ public class RideService {
 								throw new Error("Empty Ride");
 							}
 							rideRepository.save(ride);
-							saveRidePoints(ride);
-							_logger.info("Processed file: " + path);
-							counter.incrementAndGet();
+							saveRide(ride);
+                            int count = counter.incrementAndGet();
+							_logger.info("[" + count + "] Processed file: " + path);
+
 						}
 						catch (Exception e) {
 							_logger.error("Error processing file: " + path, e);
@@ -182,11 +182,6 @@ public class RideService {
 			return null;
 		}
 
-		ride.setRideStart(new Date(rideTimestamps[0]));
-		ride.setRideEnd(new Date(rideTimestamps[1]));
-
-		List<RideIncident> rideIncidentList = csvUtilService.parseCsvToModel(filteredParts[0], RideIncident.class);
-
 		return ride;
 	}
 
@@ -244,7 +239,9 @@ public class RideService {
         List<Double> speeds = geoService.calculateSpeed(coordinates);
         List<Double> medianSpeeds = geoService.centeredMovingMedian(speeds, 3);
         for (int i = medianSpeeds.size() - 1; i >= 0; i--) {
-            if (medianSpeeds.get(i) < 1) {
+            if (medianSpeeds.get(i) < 1 && i % 2 == 0) {
+                // Remove slow points, as they are not needed,
+                // but only every second point as they might contain relevant information over time
                 coordinates.remove(i);
             }
         }
@@ -255,7 +252,7 @@ public class RideService {
         return coordinates;
     }
 
-	public void saveRidePoints(Ride ride) {
+	public void saveRide(Ride ride) {
 		ArrayList<MatchInformationDate> coordinates = getFilteredCoordinates(ride);
 		Map<String, Object> traceAttributes = valhallaMapMatchingService.getTraceAttributes(coordinates);
 
@@ -264,27 +261,70 @@ public class RideService {
 			throw new RuntimeException("Valhalla Error, Missing trace attributes for Ride");
 		}
 
-		ArrayList<HashMap<String, Object>> matched_points = (ArrayList<HashMap<String, Object>>) traceAttributes
-			.get("matched_points");
-		if (matched_points.size() != coordinates.size()) {
-			throw new RuntimeException("Mismatch between matched Points and Ride locations");
-		}
-		for (int i = coordinates.size()-1; i >= 0; i--) {
-			HashMap<String, Object> matchedPoint = matched_points.get(i);
-			if (matchedPoint.get("error") != null) {
+        // Enrich Valhalla Data
+        List<HashMap<String, Object>> matchedPoints = this.getFilteredAndEnrichedPoints(traceAttributes, coordinates);
+        List<HashMap<String, Object>> edges = this.getEnrichedEdges(traceAttributes);
+
+        // Sort points by edge id
+        List<List<HashMap<String, Object>>> sortedPoints = this.getSortedPointsAndEnrichPoints(matchedPoints, edges);
+        List<HashMap<String, Object>> unsortedPoints = new ArrayList<>();
+        for (List<HashMap<String, Object>> sortedPoint : sortedPoints) {
+            unsortedPoints.addAll(sortedPoint);
+        }
+
+        this.saveRidePoints(ride, coordinates);
+        List<List<List<HashMap<String, Object>>>> sortedRideParts = this.getRidePartsAndPutStops(sortedPoints);
+        this.putIntersectionAndTrafficSignalCluster(unsortedPoints);
+        this.saveMatchedPoints(ride, sortedPoints);
+        List<IntersectionNode> intersectionNodeList = new ArrayList<>();
+        List<IntersectionEdge> intersectionEdgeList = new ArrayList<>();
+        for (List<List<HashMap<String, Object>>> sortedRidePart : sortedRideParts) {
+            this.getIntersections(ride, sortedRidePart, intersectionEdgeList, intersectionNodeList);
+        }
+
+        // calculate waiting times
+        List<Double> speeds = intersectionEdgeList.stream()
+                .map(e -> e.getLength() / e.getDuration()).sorted().toList();
+        if (!speeds.isEmpty()) {
+            double medianSpeed = speeds.get(speeds.size() / 2);
+            for  (IntersectionEdge intersectionEdge : intersectionEdgeList) {
+                intersectionEdge.calculateAndSetWaitingTime(medianSpeed);
+            }
+            for  (IntersectionNode intersectionNode : intersectionNodeList) {
+                intersectionNode.calculateAndSetWaitingTime(medianSpeed);
+            }
+        }
+        intersectionEdgeRepository.saveAll(intersectionEdgeList);
+        intersectionNodeRepository.saveAll(intersectionNodeList);
+        _logger.info("Size of sorted: {}", sortedPoints.size());
+	}
+
+    public List<HashMap<String, Object>> getFilteredAndEnrichedPoints(Map<String, Object> traceAttributes,
+                                                                      List<MatchInformationDate> coordinates) {
+        ArrayList<HashMap<String, Object>> matchedPoints = (ArrayList<HashMap<String, Object>>) traceAttributes
+                .get("matched_points");
+        if (matchedPoints.size() != coordinates.size()) {
+            throw new RuntimeException("Mismatch between matched Points and Ride locations");
+        }
+        for (int i = coordinates.size()-1; i >= 0; i--) {
+            HashMap<String, Object> matchedPoint = matchedPoints.get(i);
+            if (matchedPoint.get("error") != null) {
                 // coordinates.remove(i);
-                matched_points.remove(i);
-			}
-			else {
+                matchedPoints.remove(i);
+            }
+            else {
                 matchedPoint.put("timestamp", coordinates.get(i).getOriginalTimestamp());
                 Coordinate coordinate = new Coordinate((double) matchedPoint.get("lon"),
                         (double) matchedPoint.get("lat"));
                 matchedPoint.put("coordinate", coordinate);
                 matchedPoint.put("point", geometryFactory.createPoint(coordinate));
-			}
-		}
+            }
+        }
+        return matchedPoints;
+    }
 
-		ArrayList<HashMap<String, Object>> edges = (ArrayList<HashMap<String, Object>>) traceAttributes.get("edges");
+    public List<HashMap<String, Object>> getEnrichedEdges(Map<String, Object> traceAttributes) {
+        ArrayList<HashMap<String, Object>> edges = (ArrayList<HashMap<String, Object>>) traceAttributes.get("edges");
         for (HashMap<String, Object> edge : edges) {
             if (edge.get("way_id") != null) {
                 Integer wayId = (Integer) edge.get("way_id");
@@ -299,57 +339,63 @@ public class RideService {
                 }
             }
         }
+        return edges;
+    }
 
-		for (MatchInformationDate loc : coordinates) {
-			RidePoint p = new RidePoint();
-			p.setRide(ride);
-			p.setTimestamp(loc.getOriginalTimestamp());
-			Coordinate coord = new Coordinate(loc.getLng(), loc.getLat());
-			p.setGeom(geometryFactory.createPoint(coord));
-			ridePointRepository.save(p);
-		}
-
+    /**
+     * Sorts the points into lists with the same edge index.
+     * Enriches the points with the following information based on the edge it belongs to:
+     *  osm_line: edge
+     *  way_id: if of edge
+     *  traffic_signal_clusters: intersection of edge with traffic signal clusters
+     * If no edge belongs to the points only the following information is added:
+     *  traffic_signal_clusters: traffic signal clusters from edge before and after
+     * If there is no edge for the first or last point group, those point groups are discarded.
+     * If there is no edge for a group and the groups before and after have the same ids, those groups are also discarded.
+     * @param points - The points from valhalla
+     * @param edges - The edges from valhalla
+     * @return - The sorted points.
+     */
+    public List<List<HashMap<String, Object>>> getSortedPointsAndEnrichPoints(List<HashMap<String, Object>> points,
+                                                               List<HashMap<String, Object>> edges) {
+        // Sort points by edge id
         List<List<HashMap<String, Object>>> sortedPoints = new ArrayList<>();
         List<HashMap<String, Object>> currentPoints = new ArrayList<>();
         Integer currentWayId = null;
-        for (HashMap<String, Object> matchedPoint : matched_points) {
+        for (HashMap<String, Object> matchedPoint : points) {
+            Integer wayId = null;
             if (matchedPoint.get("edge_index") != null) {
                 int edgeIndex = (int) matchedPoint.get("edge_index");
                 HashMap<String, Object> edge = edges.get(edgeIndex);
-                Integer wayId = (Integer) edge.get("way_id");
+                wayId = (Integer) edge.get("way_id");
                 matchedPoint.put("way_id", wayId);
                 matchedPoint.put("osm_line", edge.get("osm_line"));
                 matchedPoint.put("traffic_signal_clusters", edge.get("traffic_signal_clusters"));
-                if (!wayId.equals(currentWayId)) {
-                    currentWayId = wayId;
-                    if (!currentPoints.isEmpty()) {
-                        sortedPoints.add(currentPoints);
-                        currentPoints = new ArrayList<>();
-                    }
-                }
-                currentPoints.add(matchedPoint);
-            } else {
-                if (currentWayId != null) {
-                    currentWayId = null;
-                    if (!currentPoints.isEmpty()) {
-                        sortedPoints.add(currentPoints);
-                        currentPoints = new ArrayList<>();
-                    }
-                }
-                currentPoints.add(matchedPoint);
             }
+            if ((wayId == null && currentWayId != null) || (wayId != null && !wayId.equals(currentWayId))) {
+                // If different way id, a new edge is created, and the current edge is saved
+                currentWayId = wayId;
+                if (!currentPoints.isEmpty()) {
+                    sortedPoints.add(currentPoints);
+                    currentPoints = new ArrayList<>();
+                }
+            }
+            currentPoints.add(matchedPoint);
         }
         if (!currentPoints.isEmpty()) {
             sortedPoints.add(currentPoints);
             currentPoints = new ArrayList<>();
         }
 
+        // Discard points without edge id, if at start or end
+        // Discard points if in between same matching edge
         for (int i = sortedPoints.size()-1; i >= 0; i--) {
             Integer wayId = (Integer) sortedPoints.get(i).getFirst().get("way_id");
             if (wayId == null) {
                 if (i == sortedPoints.size()-1 || i == 0) {
                     sortedPoints.remove(i);
-                } else {
+                }
+                else {
                     Integer prevWayId = (Integer) sortedPoints.get(i-1).getFirst().get("way_id");
                     Integer nextWayId = (Integer) sortedPoints.get(i+1).getFirst().get("way_id");
                     if (prevWayId == null) {
@@ -374,6 +420,23 @@ public class RideService {
             }
         }
 
+        // Put previous and next osm id
+        for (int i = 0; i < sortedPoints.size(); i++) {
+            Object prevLine = null;
+            Object nextLine = null;
+            if (i > 0) {
+                prevLine = sortedPoints.get(i-1).getFirst().get("osm_line");
+            }
+            if (i < sortedPoints.size() - 1) {
+                nextLine = sortedPoints.get(i+1).getFirst().get("osm_line");
+            }
+            for (HashMap<String, Object> p : sortedPoints.get(i)) {
+                p.put("prev_osm_line", prevLine);
+                p.put("next_osm_line", nextLine);
+            }
+        }
+
+        // And traffic signal clusters for points without edge
         for (int i = 1; i < sortedPoints.size()-1; i++) {
             List<HashMap<String, Object>> current = sortedPoints.get(i);
             if (current.getFirst().get("way_id") == null) {
@@ -388,85 +451,352 @@ public class RideService {
             }
         }
 
-        List<HashMap<String, Object>> unsortedPoints = new ArrayList<>();
-        for (List<HashMap<String, Object>> sortedPoint : sortedPoints) {
-            unsortedPoints.addAll(sortedPoint);
-        }
+        return sortedPoints;
+    }
 
+    /**
+     * Adds whether a point belongs to an intersection, and which intersection it belongs to.
+     * The point before and after are also added to the intersection
+     * @param points - The enriched points from valhalla, each point must have a list of TrafficSignalCluster
+     */
+    public void putIntersectionAndTrafficSignalCluster(List<HashMap<String, Object>> points) {
         boolean inIntersection = false;
-        for (int i = 0; i < unsortedPoints.size(); i++) {
-            HashMap<String, Object> matchedPoint = unsortedPoints.get(i);
+        for (int i = 0; i < points.size(); i++) {
+            HashMap<String, Object> matchedPoint = points.get(i);
             Point point = (Point) matchedPoint.get("point");
             List<TrafficSignalCluster> clusters = (List<TrafficSignalCluster>) matchedPoint.get("traffic_signal_clusters");
             for (TrafficSignalCluster cluster : clusters) {
-                if (geoService.pointInPolygon(point, cluster.getPolygon())) {
+                if (geoService.pointInPolygon(point, cluster.getGeom())) {
                     matchedPoint.put("intersection", true);
+                    matchedPoint.put("traffic_signal_cluster", cluster);
                 }
             }
             if (matchedPoint.get("intersection") != null) {
+                // Add point before in polygon also to intersection
                 if (!inIntersection && i > 0) {
-                    HashMap<String, Object> prevPoint = unsortedPoints.get(i-1);
+                    HashMap<String, Object> prevPoint = points.get(i-1);
                     prevPoint.put("intersection", true);
                 }
                 inIntersection = true;
             } else {
+                // Add point after in polygon also to intersection
                 if (inIntersection) {
                     matchedPoint.put("intersection", true);
                 }
                 inIntersection = false;
             }
         }
-
-        List<List<HashMap<String, Object>>> allIntersections = new ArrayList<>();
-        List<HashMap<String, Object>> currentIntersections = new ArrayList<>();
-        for (List<HashMap<String, Object>> sortedPoint : sortedPoints) {
-            for (HashMap<String, Object> point : sortedPoint) {
-                if (point.get("intersection") != null) {
-                    currentIntersections.add(point);
-                } else {
-                    if (!currentIntersections.isEmpty()) {
-                        allIntersections.add(currentIntersections);
-                        currentIntersections = new ArrayList<>();
-                    }
+        for (int i = 0; i < points.size(); i++) {
+            HashMap<String, Object> point = points.get(i);
+            // Put cluster to intersections without cluster
+            if (point.get("intersection") != null && point.get("traffic_signal_cluster") == null) {
+                // If in intersection, but not belonging to a cluster, move it to belonging cluster
+                if (i < points.size()-1) {
+                    // Point belongs to cluster following it, in case it exists
+                    HashMap<String, Object> nextPoint = points.get(i+1);
+                    point.put("traffic_signal_cluster", nextPoint.get("traffic_signal_cluster"));
+                }
+                if (i > 0 && point.get("traffic_signal_cluster") == null) {
+                    // Else point belongs to cluster before it
+                    HashMap<String, Object> prevPoint = points.get(i-1);
+                    point.put("traffic_signal_cluster", prevPoint.get("traffic_signal_cluster"));
                 }
             }
         }
-        if (!sortedPoints.isEmpty() && !sortedPoints.getFirst().isEmpty()
-                && sortedPoints.getFirst().getFirst().get("intersection") != null
-                && sortedPoints.getFirst().getFirst() == allIntersections.getFirst().getFirst()) {
-            // Removes, the first intersection, if the ride starts with an intersection
-            // If an intersection is not finished at the end of the ride, it has not to be removed, as only
-            // complete intersections are added.
+    }
+
+
+    /**
+     * Splits a ride into multiple parts.
+     * It adds a stop if the distance behaves unexpectantly.
+     * The edge containing the stop is not added to any ride part.
+     * @param sortedPoints - The enriched list of lists of points from valhalla, each point must have a Coordinate.
+     *                     The inner list contains all points with the same edge index (if in order) = edge
+     *                     The outer list contains all edges of the ride.
+     * @return - The ride parts.
+     */
+    public List<List<List<HashMap<String, Object>>>> getRidePartsAndPutStops(List<List<HashMap<String, Object>>> sortedPoints) {
+        List<List<List<HashMap<String, Object>>>> sortedRideParts = new ArrayList<>();
+        if (sortedPoints.isEmpty()) {
+            return sortedRideParts;
+        }
+        List<List<HashMap<String, Object>>> currentRouteParts = new ArrayList<>();
+
+        Coordinate previousCoordinate = (Coordinate) sortedPoints.getFirst().getFirst().get("coordinate");
+        int sizeLoopCheck = 5;
+        int stops = 0;
+        int edgeId = 0;
+        for (List<HashMap<String, Object>> edge : sortedPoints) {
+            if (edgeId == 81) {
+                edgeId = edgeId;
+            }
+            edgeId++;
+            Date t0 = (Date) edge.getFirst().get("timestamp");
+            double maxDistanceFromTracePoint = 0;
+            boolean foundStop = false;
+            for (int i = 0; i < edge.size(); i++) {
+                HashMap<String, Object> currentPoint = edge.get(i);
+                currentPoint.put("stops", stops);
+                Coordinate currentCoordinate = (Coordinate) currentPoint.get("coordinate");
+                Coordinate compareCoordinatePrevious = currentCoordinate;
+                List<Double> distances = new ArrayList<>();
+                for (int j = 1; i + j < edge.size() && distances.size() < sizeLoopCheck; j++) {
+                    Coordinate compareCoordinate = (Coordinate) edge.get(i + j).get("coordinate");
+                    if (compareCoordinate.equals(compareCoordinatePrevious)) {
+                        continue;
+                    }
+                    distances.add(geoService.distance(currentCoordinate, compareCoordinate));
+                    compareCoordinatePrevious = compareCoordinate;
+                }
+                for (int j = 0; j < distances.size() - 1; j++) {
+                    if (distances.get(j) - distances.get(j + 1) > 2) {
+                        // Add stop, if distance did not increase on current edge (considering threshold of 2 meters)
+                        // This can lead to false stop detections on winding roads (or on roads without osm detection)
+                        foundStop = true;
+                        break;
+                    }
+                }
+
+                if (geoService.distance(currentCoordinate, previousCoordinate) > 100) {
+                    // Add stop if distance to previous point is exceeding 100 meters
+                    // This should only happen dur to bad GPS tracking/matching
+                    foundStop = true;
+                }
+                previousCoordinate = currentCoordinate;
+
+                Double distance_from_trace_point = (Double) currentPoint.get("distance_from_trace_point");
+                if (distance_from_trace_point != null && distance_from_trace_point > maxDistanceFromTracePoint) {
+                    maxDistanceFromTracePoint = distance_from_trace_point;
+                }
+
+                Date t1 = (Date) currentPoint.get("timestamp");
+                long diff = (t1.getTime() - t0.getTime())/1000;
+                if (diff > 60 * 5 || (maxDistanceFromTracePoint > 15 && diff > 60 * 2)) {
+                    // Add stop if an edge takes longer then 5 minutes to complete
+                    // Or if there is a break of 2 minutes and a large distance from trace point on current edge
+                    // indicating a short break, leaving the current path
+                    foundStop = true;
+                }
+            }
+            if (!foundStop) {
+                // Adds, only parts without stops
+                currentRouteParts.add(edge);
+            } else {
+                stops++;
+                this.removeFirstAndLastAndServiceWays(currentRouteParts);
+                // If a stop occurred, all previous edges are placed into one list.
+                if (!currentRouteParts.isEmpty()) {
+                    sortedRideParts.add(currentRouteParts);
+                    currentRouteParts = new ArrayList<>();
+                }
+            }
+        }
+        this.removeFirstAndLastAndServiceWays(currentRouteParts);
+        if (!currentRouteParts.isEmpty()) {
+            sortedRideParts.add(currentRouteParts);
+            currentRouteParts = new ArrayList<>();
+        }
+        return sortedRideParts;
+    }
+
+    public void removeFirstAndLastAndServiceWays(List<List<HashMap<String, Object>>> routeParts) {
+        this.removeServiceWays(routeParts);
+        if (!routeParts.isEmpty()) {
+            routeParts.removeFirst();
+        }
+        if (!routeParts.isEmpty()) {
+            routeParts.removeLast();
+        }
+        this.removeServiceWays(routeParts);
+    }
+
+    public boolean checkEndStartCondition(List<HashMap<String, Object>> edge) {
+        PlanetOsmLine line = (PlanetOsmLine) edge.getFirst().get("osm_line");
+        if (line != null && line.getHighway().equals("service")) {
+            // If edge is a service way, remove service way (as this is usually unintended ride)
+            return  true;
+        }
+
+        for (HashMap<String, Object> currentPoint : edge) {
+            Double distance_from_trace_point = (Double) currentPoint.get("distance_from_trace_point");
+            if (distance_from_trace_point != null && distance_from_trace_point > 15) {
+                // If the edge contains a point with a large distance from the trace point, the current position
+                // is usually wrongly mapped as the position is most likely not on the path but inside a house
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void removeServiceWays(List<List<HashMap<String, Object>>> routeParts) {
+        while (!routeParts.isEmpty()) {
+            if (checkEndStartCondition(routeParts.getFirst())) {
+                routeParts.removeFirst();
+            } else {
+                break;
+            }
+        }
+        while (!routeParts.isEmpty()) {
+            if (checkEndStartCondition(routeParts.getLast())) {
+                routeParts.removeLast();
+            } else {
+                break;
+            }
+        }
+    }
+
+    public void getIntersections(Ride ride, List<List<HashMap<String, Object>>> sortedPoints,
+                                 List<IntersectionEdge> intersectionEdgeList, List<IntersectionNode> intersectionNodeList) {
+        if (sortedPoints.isEmpty() || sortedPoints.size() < 2) {
+            return;
+        }
+        List<HashMap<String, Object>> unsortedPoints = new ArrayList<>();
+        for (List<HashMap<String, Object>> edge : sortedPoints) {
+            unsortedPoints.addAll(edge);
+        }
+
+        // Create intersections
+        List<List<HashMap<String, Object>>> allEdges = new ArrayList<>();
+        List<HashMap<String, Object>> currentEdge = new ArrayList<>();
+
+        List<List<HashMap<String, Object>>> allIntersections = new ArrayList<>();
+        List<HashMap<String, Object>> currentIntersection = new ArrayList<>();
+        TrafficSignalCluster currentCluster = null;
+        for (HashMap<String, Object> point : unsortedPoints) {
+            if (point.get("intersection") != null) {
+                TrafficSignalCluster cluster = (TrafficSignalCluster) point.get("traffic_signal_cluster");
+                if (currentCluster != null && !Objects.equals(cluster.getId(), currentCluster.getId())) {
+                    if (!currentIntersection.isEmpty()) {
+                        allIntersections.add(currentIntersection);
+                        currentIntersection = new ArrayList<>();
+                    }
+                }
+                currentCluster = cluster;
+                currentIntersection.add(point);
+                if (!currentEdge.isEmpty()) {
+                    // Add first point of intersection to remove gap
+                    currentEdge.add(point);
+                    allEdges.add(currentEdge);
+                    currentEdge = new ArrayList<>();
+                }
+            } else {
+                if (!currentIntersection.isEmpty()) {
+                    currentEdge.add(currentIntersection.getLast()); // Add last point of intersection to remove gap
+                    allIntersections.add(currentIntersection);
+                    currentIntersection = new ArrayList<>();
+                }
+                currentEdge.add(point);
+            }
+        }
+        if (!currentEdge.isEmpty()) {
+            allEdges.add(currentEdge);
+        }
+        if (!currentIntersection.isEmpty()) {
+            allIntersections.add(currentIntersection);
+        }
+
+        // Skips first intersection if ride starts with it as that is likely incomplete.
+        // The last intersection is skipped as well if the ride ends with it
+        if (unsortedPoints.getFirst().get("intersection") != null) {
             allIntersections.removeFirst();
+        }
+        if (unsortedPoints.getLast().get("intersection") != null) {
+            if (!allIntersections.isEmpty()) {
+                allIntersections.removeLast();
+            }
+        }
+
+        for (List<HashMap<String, Object>> edge : allEdges) {
+            List<List<HashMap<String, Object>>> sortedEdges = new ArrayList<>();
+            List<HashMap<String, Object>> sortedEdge = new ArrayList<>();
+            Integer wayId = (Integer) edge.getFirst().get("way_id");
+            for (HashMap<String, Object> point : edge) {
+                Integer currentWayId = (Integer) point.get("way_id");
+                sortedEdge.add(point);
+                if ((wayId == null && currentWayId != null) || (wayId != null && !wayId.equals(currentWayId))) {
+                    wayId = currentWayId;
+                    sortedEdges.add(sortedEdge);
+                    sortedEdge = new ArrayList<>();
+                    sortedEdge.add(point); // Add point to both edges to remove gaps between edges
+                }
+            }
+            if (!sortedEdge.isEmpty()) {
+                sortedEdges.add(sortedEdge);
+            }
+
+            for (List<HashMap<String, Object>> e : sortedEdges) {
+                if (e.size() < 2) {
+                    continue;
+                }
+                IntersectionEdge intersectionEdge = new IntersectionEdge();
+                this.applyIntersectionProperties(e, intersectionEdge, ride);
+
+                intersectionEdge.setLine((PlanetOsmLine) e.getFirst().get("osm_line"));
+                intersectionEdge.setPrevLine((PlanetOsmLine) e.getFirst().get("prev_osm_line"));
+                intersectionEdge.setNextLine((PlanetOsmLine) e.getFirst().get("next_osm_line"));
+                intersectionEdgeList.add(intersectionEdge);
+            }
         }
 
         for (List<HashMap<String, Object>> intersection : allIntersections) {
             if (intersection.size() < 2) {
                 continue;
             }
-            IntersectionDelay intersectionDelay = new IntersectionDelay();
-            Date endTime = (Date) intersection.getLast().get("timestamp");
-            Date startTime = (Date) intersection.getFirst().get("timestamp");
-            intersectionDelay.setEndTime(endTime);
-            intersectionDelay.setStartTime(startTime);
-            intersectionDelay.setRide(ride);
-            intersectionDelay.setEndLine((PlanetOsmLine) intersection.getLast().get("osm_line"));
-            intersectionDelay.setStartLine((PlanetOsmLine) intersection.getFirst().get("osm_line"));
-            Coordinate[] lineString = new Coordinate[intersection.size()];
-            for (int i = 0; i < intersection.size(); i++) {
-                HashMap<String, Object> point = intersection.get(i);
-                Coordinate coord = new Coordinate((double) point.get("lon"), (double) point.get("lat"));
-                lineString[i] = coord;
-            }
-            double duration = (double) (endTime.getTime() - startTime.getTime()) / 1000;
-            intersectionDelay.setDuration(duration);
-            double length = geoService.getLength(List.of(lineString));
-            intersectionDelay.setLength(length);
-            intersectionDelay.setSpeed(3.6 * length/duration);
-            intersectionDelay.setGeom(geometryFactory.createLineString(lineString));
-            intersectionDelayRepository.save(intersectionDelay);
-        }
+            IntersectionNode intersectionNode = new IntersectionNode();
+            this.applyIntersectionProperties(intersection, intersectionNode, ride);
 
+            TrafficSignalCluster cluster = (TrafficSignalCluster) intersection.get(1).get("traffic_signal_cluster");
+            intersectionNode.setTrafficSignalCluster(cluster);
+            intersectionNode.setEndLine((PlanetOsmLine) intersection.getLast().get("osm_line"));
+            intersectionNode.setStartLine((PlanetOsmLine) intersection.getFirst().get("osm_line"));
+
+            List<String> names = new ArrayList<>();
+            for (HashMap<String, Object> point : intersection) {
+                PlanetOsmLine line = (PlanetOsmLine) point.get("osm_line");
+                if (line != null && line.getName() != null && (names.isEmpty() || !names.getLast().equals(line.getName()))) {
+                    names.add(line.getName());
+                }
+            }
+            if (names.isEmpty()) {
+                List<String> namesCluster = cluster.getOsmLinesName();
+                for (int i = 0; i < namesCluster.size() && i < 2; i++) {
+                    names.add(namesCluster.get(i));
+                }
+            }
+            intersectionNode.setStreetNames(String.join(";", names));
+
+            intersectionNodeList.add(intersectionNode);
+        }
+    }
+
+    public void applyIntersectionProperties(List<HashMap<String, Object>> intersection, IntersectionBaseClass element, Ride ride) {
+        Date endTime = (Date) intersection.getLast().get("timestamp");
+        Date startTime = (Date) intersection.getFirst().get("timestamp");
+        element.setEndTime(endTime);
+        element.setStartTime(startTime);
+        double duration = (double) (endTime.getTime() - startTime.getTime()) / 1000;
+        element.setDuration(duration);
+        element.setRide(ride);
+        Coordinate[] lineString = new Coordinate[intersection.size()];
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < intersection.size(); i++) {
+            HashMap<String, Object> point = intersection.get(i);
+            PlanetOsmLine line = (PlanetOsmLine) point.get("osm_line");
+            if (line != null && line.getName() != null && (names.isEmpty() || !names.getLast().equals(line.getName()))) {
+                names.add(line.getName());
+            }
+            lineString[i] = (Coordinate) point.get("coordinate");
+        }
+        double length = geoService.getLength(List.of(lineString));
+        element.setLength(length);
+        element.setSpeed(3.6 * length/duration);
+        element.setGeom(geometryFactory.createLineString(lineString));
+        element.setRegions(new HashSet<>(regionRepository
+                .findContainingRegions((Point) intersection.getFirst().get("point"))));
+    }
+
+    public void saveMatchedPoints(Ride ride, List<List<HashMap<String, Object>>> sortedPoints) {
+        List<MatchedPoint> matchedPointList = new ArrayList<>();
         for (int i = 0; i < sortedPoints.size(); i++) {
             for (int j = 0; j < sortedPoints.get(i).size(); j++) {
                 HashMap<String, Object> point = sortedPoints.get(i).get(j);
@@ -480,94 +810,28 @@ public class RideService {
                     mP.setLine((PlanetOsmLine) point.get("osm_line"));
                 }
                 mP.setInIntersection(point.get("intersection") != null);
-                matchedPointRepository.save(mP);
+                mP.setDistanceAlongEdge((Double) point.get("distance_along_edge"));
+                mP.setDistanceFromTracePoint((Double) point.get("distance_from_trace_point"));
+                mP.setStops((int)  point.get("stops"));
+                matchedPointList.add(mP);
             }
         }
-
-        for (int i = 1; i < sortedPoints.size()-1; i++) {
-            HashMap<String, Object> startPoint = sortedPoints.get(i).getFirst();
-            HashMap<String, Object> endPoint = sortedPoints.get(i+1).getFirst();
-
-            List<HashMap<String, Object>> points = new ArrayList<>(sortedPoints.get(i));
-            points.add(endPoint);
-            List<Coordinate> pointsCoordinates = new ArrayList<>();
-            for (HashMap<String, Object> point : points) {
-                pointsCoordinates.add(new Coordinate((double) point.get("lon"), (double) point.get("lat")));
-            }
-            Coordinate first = pointsCoordinates.getFirst();
-            Coordinate last = pointsCoordinates.getLast();
-            double lengthPoints = geoService.getLength(pointsCoordinates);
-
-            if (startPoint.get("osm_line") != null) {
-                PlanetOsmLine osmLine = (PlanetOsmLine) startPoint.get("osm_line");
-                List<Coordinate> osmLineCoordinates = geoService.getLineCoordinates(osmLine);
-                double lengthOsmLine = geoService.getLength(osmLineCoordinates);
-                if (lengthOsmLine > 0 && lengthPoints/lengthOsmLine > 0.7) {
-                    Date startTime = (Date) startPoint.get("timestamp");
-                    Date endTime = (Date) endPoint.get("timestamp");
-
-                    Edge edge = new Edge();
-                    edge.setLine(osmLine);
-                    edge.setRide(ride);
-                    edge.setLength(lengthPoints);
-                    edge.setStartTime(startTime);
-                    edge.setEndTime(endTime);
-                    edge.setSpeed(3.6 * lengthPoints/((double) (endTime.getTime() - startTime.getTime()) / 1000));
-
-                    double dpFoF = geoService.distance(first, osmLineCoordinates.getFirst());
-                    double dpFoL = geoService.distance(first, osmLineCoordinates.getLast());
-                    double dpLoF = geoService.distance(last, osmLineCoordinates.getFirst());
-                    double dpLoL = geoService.distance(last, osmLineCoordinates.getLast());
-                    if (dpFoF < dpFoL && dpLoL < dpLoF && dpFoF < dpLoF) {
-                        edge.setDirection(true);
-                    } else if (dpFoL < dpFoF && dpLoF < dpFoF && dpFoL < dpLoL) {
-                        edge.setDirection(false);
-                    }
-                    edgeRepository.save(edge);
-                }
-            }
-        }
-
-        _logger.info("Size of sorted: {}", sortedPoints.size());
-
-	}
-
-    private int distanceSignalOnHighway(String highway) {
-        return switch (highway) {
-            case "primary", "secondary", "cycleway", "path" -> 60;
-            case "residential", "tertiary" -> 30;
-            default -> 30;
-        };
+        matchedPointRepository.saveAll(matchedPointList);
     }
 
-    private int distanceMerge(String highway, String highway2) {
-        if (highway.equals(highway2)) {
-            return switch (highway) {
-                case "primary", "secondary", "cycleway", "path" -> 60;
-                case "residential", "tertiary" -> 30;
-                default -> 30;
-            };
+    public void saveRidePoints(Ride ride, List<MatchInformationDate> coordinates) {
+        List<RidePoint> ridePointList = new ArrayList<>();
+        for (MatchInformationDate loc : coordinates) {
+            RidePoint p = new RidePoint();
+            p.setRide(ride);
+            p.setTimestamp(loc.getOriginalTimestamp());
+            Coordinate coord = new Coordinate(loc.getLng(), loc.getLat());
+            p.setGeom(geometryFactory.createPoint(coord));
+            ridePointList.add(p);
         }
-        return 30;
+        ridePointRepository.saveAll(ridePointList);
     }
 
-    private Double getSmallestDistanceToTrafficSignals(List<TrafficSignal> trafficSignals, Coordinate coordinate) {
-        List<Double> distances = new ArrayList<>();
-        for (TrafficSignal trafficSignal : trafficSignals) {
-            double distance = geoService.distance(coordinate, trafficSignal.getGeom().getCoordinate());
-            distances.add(distance);
-        }
-        if (!distances.isEmpty()) {
-            double smallestDistance = distances.getFirst();
-            for (double distance : distances) {
-                if (distance < smallestDistance) {
-                    smallestDistance = distance;
-                }
-            }
-            return smallestDistance;
-        }
-        return null;
-    }
 
 	public List<RidePoint> getRidePoints(Long rideId) {
 		return ridePointRepository.findByRideId(rideId);
@@ -577,27 +841,53 @@ public class RideService {
 		return matchedPointRepository.findByRideId(rideId);
 	}
 
-    public List<IntersectionDelay> getIntersectionDelays(Long rideId) {
-        return intersectionDelayRepository.findByRideId(rideId);
+    public List<IntersectionNode> getIntersectionNodes(Long rideId) {
+        return intersectionNodeRepository.findByRideId(rideId);
     }
 
-    public List<IntersectionDelayGroup> aggregateDelays() {
-        return intersectionDelayRepository.aggregateDelays();
+    public List<IntersectionEdge> getIntersectionEdge(Long rideId) {
+        return intersectionEdgeRepository.findByRideId(rideId);
     }
 
-	public List<Edge> getEdges(Long rideId) {
-		return edgeRepository.findByRideId(rideId);
-	}
+    public List<IntersectionNode> getIntersectionNodes(Long trafficSignalClusterId, Long startOsmId, Long endOsmId) {
+        return intersectionNodeRepository.findByClusterIdStartEndOsmId(trafficSignalClusterId, startOsmId, endOsmId);
+    }
+
+    public List<IntersectionNodeAggregate> aggregateNodes(Long trafficSignalClusterId, Long count, String region,
+                                                          String streetNames) {
+        return intersectionNodeRepository.aggregateNodes(trafficSignalClusterId, count, region, streetNames);
+    }
+
+    public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId,
+              Long count, String region, String streetNames) {
+        return intersectionNodeRepository.findAllIncludingString(trafficSignalClusterId, count, region, streetNames);
+    }
+
+    public List<IntersectionEdge> getIntersectionEdge(Long prevOsmId, Long osmId, Long nextOsmId) {
+        return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevOsmId, osmId, nextOsmId);
+    }
+
+    public List<IntersectionEdgeAggregate> aggregateEdges(Long count, String region, String name) {
+        return intersectionEdgeRepository.aggregateEdges(count, region, name);
+    }
+
+    public List<String> findAllStreetNamesIntersectionEdge(Long count, String region, String name) {
+        return intersectionEdgeRepository.findAllStreetNames(count, region, name);
+    }
 
 	public List<Long> getRideIds() {
 		return rideRepository.getRideIds();
 	}
 
-    public List<EdgeSpeedStats> getAverageSpeeds() {
-        return edgeRepository.getAvgSpeedByEdge();
+    public List<Long> findByOsmLineId(Long osmLineId) {
+        return intersectionEdgeRepository.findByOsmLineId(osmLineId);
     }
 
-    public List<Long> findByOsmLineId(Long osmLineId) {
-        return edgeRepository.findByOsmLineId(osmLineId);
+    public List<RegionAggregate> aggregateIntersectionDataPerRegion(String region) {
+        return regionRepository.aggregateIntersectionDataPerRegion(region);
+    }
+
+    public List<Region> findRegionByName(String region) {
+        return regionRepository.findRegionByName(region);
     }
 }

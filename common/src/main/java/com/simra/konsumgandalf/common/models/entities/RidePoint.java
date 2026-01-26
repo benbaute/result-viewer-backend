@@ -2,16 +2,22 @@ package com.simra.konsumgandalf.common.models.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Contains metadata for a single ride.
+ * GPS coordinate for a ride.
  */
+@Getter
+@Setter
 @Entity
-public class RidePoint {
-
+public class RidePoint implements FeatureMappable {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -19,49 +25,22 @@ public class RidePoint {
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "ride_id", nullable = false)
-	@JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
-	// --- Constructor ---
 	public RidePoint() {
 	}
 
-	// --- Getter and Setter ---
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public Date getTimestamp() {
-		return timestamp;
-	}
-
-	public void setTimestamp(Date timestamp) {
-		this.timestamp = timestamp;
-	}
-
-	public Ride getRide() {
-		return ride;
-	}
-
-	public void setRide(Ride ride) {
-		this.ride = ride;
-	}
-
-	public Point getGeom() {
-		return geom;
-	}
-
-	public void setGeom(Point geom) {
-		this.geom = geom;
-	}
-
+    @Override
+    public Map<String, Object> getProperties() {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("timestamp", this.getTimestamp());
+        properties.put("path", this.getRide().getPath());
+        properties.put("ride_id", this.ride.getId());
+        return properties;
+    }
 }
