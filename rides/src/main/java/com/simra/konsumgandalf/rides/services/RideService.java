@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.nio.file.FileVisitOption;
@@ -106,27 +105,24 @@ public class RideService {
 				.forEach(path -> {
 					CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 						try {
-							_logger
-								.info("Processing file: " + path + " on thread: " + Thread.currentThread().getName());
 							Ride ride = generateNewRide(path);
 							if (ride == null) {
 								throw new Error("Empty Ride");
 							}
+                            saveRide(ride);
 							rideRepository.save(ride);
-							saveRide(ride);
                             int count = counter.incrementAndGet();
-							_logger.info("[" + count + "] Processed file: " + path);
-
+							_logger.info("[{}] Processed file: {}", count, path);
 						}
 						catch (Exception e) {
-							_logger.error("Error processing file: " + path, e);
+							_logger.error("Error processing file : {}", path, e);
 						}
 					});
 					futures.add(future);
 				});
 		}
 		catch (IOException e) {
-			_logger.error("Error reading files from path: " + dataPath, e);
+			_logger.error("Error reading files from path: {}", dataPath, e);
 		}
 
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -273,8 +269,8 @@ public class RideService {
         }
 
         this.saveRidePoints(ride, coordinates);
-        List<List<List<HashMap<String, Object>>>> sortedRideParts = this.getRidePartsAndPutStops(sortedPoints);
         this.putIntersectionAndTrafficSignalCluster(unsortedPoints);
+        List<List<List<HashMap<String, Object>>>> sortedRideParts = this.getRidePartsAndPutStops(sortedPoints);
         this.saveMatchedPoints(ride, sortedPoints);
         List<IntersectionNode> intersectionNodeList = new ArrayList<>();
         List<IntersectionEdge> intersectionEdgeList = new ArrayList<>();
@@ -309,7 +305,6 @@ public class RideService {
         for (int i = coordinates.size()-1; i >= 0; i--) {
             HashMap<String, Object> matchedPoint = matchedPoints.get(i);
             if (matchedPoint.get("error") != null) {
-                // coordinates.remove(i);
                 matchedPoints.remove(i);
             }
             else {
@@ -388,7 +383,6 @@ public class RideService {
         }
 
         // Discard points without edge id, if at start or end
-        // Discard points if in between same matching edge
         for (int i = sortedPoints.size()-1; i >= 0; i--) {
             Integer wayId = (Integer) sortedPoints.get(i).getFirst().get("way_id");
             if (wayId == null) {
@@ -404,6 +398,8 @@ public class RideService {
                     } else if (nextWayId == null) {
                         throw new RuntimeException("Unexpected  null error.");
                     } else if (prevWayId.equals(nextWayId)) {
+                        // Merge points into one edge if in between same matching edge
+                        sortedPoints.get(i-1).addAll(sortedPoints.get(i));
                         sortedPoints.get(i-1).addAll(sortedPoints.get(i+1));
                         sortedPoints.remove(i+1);
                         sortedPoints.remove(i);
@@ -465,10 +461,12 @@ public class RideService {
             HashMap<String, Object> matchedPoint = points.get(i);
             Point point = (Point) matchedPoint.get("point");
             List<TrafficSignalCluster> clusters = (List<TrafficSignalCluster>) matchedPoint.get("traffic_signal_clusters");
-            for (TrafficSignalCluster cluster : clusters) {
-                if (geoService.pointInPolygon(point, cluster.getGeom())) {
-                    matchedPoint.put("intersection", true);
-                    matchedPoint.put("traffic_signal_cluster", cluster);
+            if (clusters != null) {
+                for (TrafficSignalCluster cluster : clusters) {
+                    if (geoService.pointInPolygon(point, cluster.getGeom())) {
+                        matchedPoint.put("intersection", true);
+                        matchedPoint.put("traffic_signal_cluster", cluster);
+                    }
                 }
             }
             if (matchedPoint.get("intersection") != null) {
@@ -522,17 +520,13 @@ public class RideService {
         }
         List<List<HashMap<String, Object>>> currentRouteParts = new ArrayList<>();
 
+        List<HashMap<String, Object>> pointsInRage = new ArrayList<>();
         Coordinate previousCoordinate = (Coordinate) sortedPoints.getFirst().getFirst().get("coordinate");
         int sizeLoopCheck = 5;
         int stops = 0;
-        int edgeId = 0;
+
+
         for (List<HashMap<String, Object>> edge : sortedPoints) {
-            if (edgeId == 81) {
-                edgeId = edgeId;
-            }
-            edgeId++;
-            Date t0 = (Date) edge.getFirst().get("timestamp");
-            double maxDistanceFromTracePoint = 0;
             boolean foundStop = false;
             for (int i = 0; i < edge.size(); i++) {
                 HashMap<String, Object> currentPoint = edge.get(i);
@@ -559,24 +553,37 @@ public class RideService {
 
                 if (geoService.distance(currentCoordinate, previousCoordinate) > 100) {
                     // Add stop if distance to previous point is exceeding 100 meters
-                    // This should only happen dur to bad GPS tracking/matching
+                    // This should only happen due to bad GPS tracking/matching
                     foundStop = true;
                 }
                 previousCoordinate = currentCoordinate;
 
-                Double distance_from_trace_point = (Double) currentPoint.get("distance_from_trace_point");
-                if (distance_from_trace_point != null && distance_from_trace_point > maxDistanceFromTracePoint) {
-                    maxDistanceFromTracePoint = distance_from_trace_point;
+                while (!pointsInRage.isEmpty() && geoService.distance(currentCoordinate,
+                        (Coordinate) pointsInRage.getFirst().get("coordinate")) > 50) {
+                    pointsInRage.removeFirst(); // remove points with larger distance
                 }
-
-                Date t1 = (Date) currentPoint.get("timestamp");
-                long diff = (t1.getTime() - t0.getTime())/1000;
-                if (diff > 60 * 5 || (maxDistanceFromTracePoint > 15 && diff > 60 * 2)) {
-                    // Add stop if an edge takes longer then 5 minutes to complete
-                    // Or if there is a break of 2 minutes and a large distance from trace point on current edge
-                    // indicating a short break, leaving the current path
-                    foundStop = true;
+                if (!pointsInRage.isEmpty()) {
+                    double maxDistanceFromTracePoint = 0;
+                    for (HashMap<String, Object> point : pointsInRage) {
+                        Double distance_from_trace_point = (Double) point.get("distance_from_trace_point");
+                        if (distance_from_trace_point != null && distance_from_trace_point > maxDistanceFromTracePoint) {
+                            maxDistanceFromTracePoint = distance_from_trace_point;
+                        }
+                    }
+                    long diffToPointInRage = (((Date) currentPoint.get("timestamp")).getTime() -
+                            ((Date) pointsInRage.getFirst().get("timestamp")).getTime())/1000;
+                    boolean inIntersection = currentPoint.get("intersection") != null;
+                    if ((inIntersection && diffToPointInRage > 60 * 4)
+                            || (!inIntersection && diffToPointInRage > 60 * 2)
+                            || (maxDistanceFromTracePoint > 15 && diffToPointInRage > 60 * 2)) {
+                        // Add stop if not moved more than 50 meters
+                        // ... in the last 4 minutes and in intersection
+                        // ... in the last 2 minutes and not in intersection
+                        // ... in the last 2 minutes and a large distance from trace point (in range) indicating a short break
+                        foundStop = true;
+                    }
                 }
+                pointsInRage.add(currentPoint);
             }
             if (!foundStop) {
                 // Adds, only parts without stops

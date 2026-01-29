@@ -57,7 +57,7 @@ public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 			@Param("weekDay") String weekDay, @Param("year") int year);
 
 	@Query(value = """
-            SELECT DISTINCT *
+            SELECT *
             FROM planet_osm_line p
             WHERE EXISTS(
                 SELECT 1

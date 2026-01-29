@@ -105,13 +105,14 @@ public class SchedulingService {
 	@EventListener(ApplicationReadyEvent.class)
 	public void init() {
 		_logger.info("SchedulingService started");
-		this.readNewRidesAndCalculateSafetyMetrics();
-		//this.rideService.clearRides();
-		//this.rideService.loadAllPreviousRides();
+        if (rideEntityService.emptyRideEntities()) {
+            this.readNewRidesAndCalculateSafetyMetrics();
+        }
 
 		if (analyticsServiceRegionMetrics.isEmpty()) {
 			_logger.info("No region data found, calculating safety metrics for regions");
 			analyticsServiceRegionMetrics.calculateSafetyMetricsRegion();
+            analyticsServiceSimraRegionMetrics.calculateSafetyMetricsSimraRegion();
 		}
 
 		if (profileService.count() <= 3000L) {
@@ -142,6 +143,9 @@ public class SchedulingService {
             osmService.populateClusterLineRelations();
             osmService.setStreetNames();
         }
+
+        // this.rideService.clearRides();
+        // this.rideService.loadAllPreviousRides();
 
 
 		this.exportJsons();

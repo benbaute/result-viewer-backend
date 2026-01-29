@@ -26,7 +26,6 @@ public class LoggingAspect {
 
 	public static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
 
-	private final ConcurrentMap<String, StopWatch> stopWatches = new ConcurrentHashMap<>();
 
 	private final ConcurrentMap<String, Long> totalTimes = new ConcurrentHashMap<>();
 
@@ -38,20 +37,22 @@ public class LoggingAspect {
 
 	@Around("@annotation(com.simra.konsumgandalf.common.logging.LogExecutionTime)")
 	public Object methodTimeLogger(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
-		MethodSignature methodSignature = (MethodSignature) proceedingJoinPoint.getSignature();
-		String className = methodSignature.getDeclaringType().getSimpleName();
-		String methodName = methodSignature.getName();
-		String key = className + "->" + methodName;
+        MethodSignature sig = (MethodSignature) proceedingJoinPoint.getSignature();
+        String key = sig.getDeclaringType().getSimpleName() + "->" + sig.getName();
 
-		StopWatch stopWatch = stopWatches.computeIfAbsent(key, k -> new StopWatch(k));
-		stopWatch.start(methodName);
-		Object result = proceedingJoinPoint.proceed();
-		stopWatch.stop();
+        StopWatch stopWatch = new StopWatch(key);   // ✅ new each time
+        stopWatch.start();
 
-		methodRunRepository.save(new MethodRun(methodName, stopWatch.getLastTaskTimeMillis()));
-		totalTimes.merge(key, stopWatch.getLastTaskTimeMillis(), Long::sum);
+        try {
+            return proceedingJoinPoint.proceed();
+        } finally {
+            stopWatch.stop();
 
-		return result;
+            long elapsed = stopWatch.getTotalTimeMillis();
+
+            methodRunRepository.save(new MethodRun(sig.getName(), elapsed));
+            totalTimes.merge(key, elapsed, Long::sum);
+        }
 	}
 
 	@Scheduled(cron = CronExpressions.EVERY_HOUR)

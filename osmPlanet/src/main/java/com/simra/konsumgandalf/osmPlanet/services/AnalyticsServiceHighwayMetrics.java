@@ -64,10 +64,11 @@ public class AnalyticsServiceHighwayMetrics {
 		while (true) {
 			List<PlanetOsmLine> fetchedStreets = osmHighwayRepository.findAllStreets(PageRequest.of(i, PAGE_SIZE));
             i++;
-			if (fetchedStreets.isEmpty()) {
+            if (fetchedStreets.isEmpty()) {
 				break;
 			}
-				updateSafetyMetrics(fetchedStreets);
+            updateSafetyMetrics(fetchedStreets);
+            _logger.info("Batch completed: {}", i);
 		}
 		_logger.info("All highway information updated in {} seconds.", (System.nanoTime() - startTime) / 1e9);
 	}
@@ -99,8 +100,6 @@ public class AnalyticsServiceHighwayMetrics {
 
 		safetyMetricsLineRepository.saveAll(safetyMetricsPlanetOsmLineList);
 		osmHighwayService.updateLastAnalysed(streets);
-
-		return;
 	}
 
 	/**

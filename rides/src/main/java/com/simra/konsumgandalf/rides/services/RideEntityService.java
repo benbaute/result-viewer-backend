@@ -106,17 +106,16 @@ public class RideEntityService {
 				.forEach(path -> {
 					CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 						try {
-							_logger
-								.debug("Processing file: " + path + " on thread: " + Thread.currentThread().getName());
 							RideEntity r = generateNewRideEntity(path);
 							if (r == null) {
 								return;
 							}
-							counter.incrementAndGet();
+							int count = counter.incrementAndGet();
 							bloomFilterRideExistenceChecker.add(path);
+                            _logger.info("[{}] Processed file: {}", count, path);
 						}
 						catch (Exception e) {
-							_logger.error("Error processing file: " + path, e);
+							_logger.error("Error processing file: {}", path, e);
 						}
 					});
 					futures.add(future);
@@ -360,4 +359,7 @@ public class RideEntityService {
 		return (date != null) && date.after(START_OF_RECORDING);
 	}
 
+    public boolean emptyRideEntities() {
+        return rideEntityRepository.count() == 0;
+    }
 }
