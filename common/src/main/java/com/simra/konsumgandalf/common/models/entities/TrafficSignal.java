@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 
 
 import java.util.*;
@@ -24,23 +25,11 @@ public class TrafficSignal implements FeatureMappable {
     @Column(columnDefinition = "geometry(Point,25833)")
     private Point geom25833;
 
-    @ManyToMany
-    @JoinTable(
-            name = "traffic_signal__planet_osm_line",
-            joinColumns = @JoinColumn(name = "traffic_signal_id"),
-            inverseJoinColumns = @JoinColumn(name = "osm_line_id")
-    )
-    private Set<PlanetOsmLine> osmLines = new HashSet<>();
-
 	public TrafficSignal() {
 	}
     public TrafficSignal(long id, Point point) {
         this.id = id;
         this.geom = point;
-    }
-
-    public void addOsmLine(PlanetOsmLine osmLine) {
-        osmLines.add(osmLine);
     }
 
     @Override

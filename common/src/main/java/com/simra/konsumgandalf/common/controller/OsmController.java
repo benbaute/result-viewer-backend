@@ -67,11 +67,6 @@ public class OsmController {
         return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.getAllTrafficSignals()));
     }
 
-    @GetMapping("/traffic-signals/{osmLineId}")
-    public ResponseEntity<Map<String, Object>> findTrafficSignalsByOsmLineId(@PathVariable Long osmLineId) {
-        return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.findTrafficSignalsByOsmLineId(osmLineId)));
-    }
-
     @GetMapping("/traffic-signals/cluster/{trafficSignalClusterId}")
     public ResponseEntity<Map<String, Object>> findTrafficSignalsByTrafficSignalClusterId(@PathVariable Long trafficSignalClusterId) {
         return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.findTrafficSignalsByTrafficSignalClusterId(trafficSignalClusterId)));

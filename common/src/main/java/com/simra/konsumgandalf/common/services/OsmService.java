@@ -1,48 +1,44 @@
 package com.simra.konsumgandalf.common.services;
 
-import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
-import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
-import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
-import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
-import com.simra.konsumgandalf.common.repositories.TrafficSignalClusterRepository;
-import com.simra.konsumgandalf.common.repositories.TrafficSignalRepository;
-import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
-import com.simra.konsumgandalf.common.utils.services.FileReaderService;
-import de.topobyte.osm4j.core.access.OsmIterator;
-import de.topobyte.osm4j.core.model.iface.EntityContainer;
-import de.topobyte.osm4j.core.model.iface.OsmNode;
-import de.topobyte.osm4j.core.model.iface.OsmTag;
-import de.topobyte.osm4j.core.model.iface.OsmWay;
-import de.topobyte.osm4j.pbf.seq.PbfIterator;
-import org.locationtech.jts.geom.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
+import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
+import com.simra.konsumgandalf.common.repositories.TrafficSignalClusterRepository;
+import com.simra.konsumgandalf.common.repositories.TrafficSignalRepository;
+
+import de.topobyte.osm4j.core.access.OsmIterator;
+import de.topobyte.osm4j.core.model.iface.EntityContainer;
+import de.topobyte.osm4j.core.model.iface.OsmNode;
+import de.topobyte.osm4j.core.model.iface.OsmTag;
+import de.topobyte.osm4j.pbf.seq.PbfIterator;
 
 @Service
 public class OsmService {
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final Path valhallaFolder = Paths.get("valhalla/custom_files");
 
-    @Autowired
-    private CsvUtilService csvUtilService;
-
-    @Autowired
-    private FileReaderService fileReaderService;
-
-    @Autowired
-    private PlanetOsmLineRepository planetOsmLineRepository;
 
     @Autowired
     private TrafficSignalRepository trafficSignalRepository;
@@ -52,20 +48,6 @@ public class OsmService {
 
     @Transactional
     public void saveTrafficSignals() throws IOException {
-        List<TrafficSignal> trafficSignals = readOsmFile();
-
-        Set<Long> existingIds = new HashSet<>(trafficSignalRepository.getTrafficSignalIds());
-        List<TrafficSignal> newSignals = new ArrayList<>();
-
-        for (TrafficSignal s : trafficSignals) {
-            if (!existingIds.contains(s.getId())) {
-                newSignals.add(s);
-            }
-        }
-        trafficSignalRepository.saveAll(newSignals);
-    }
-
-    public List<TrafficSignal> readOsmFile() throws IOException {
         List<String> osmFiles = listAvailableFiles().stream().filter(s -> s.endsWith(".osm.pbf")).toList();
         if (osmFiles.isEmpty()) {
             throw new IOException("No OSM files found");
@@ -76,7 +58,6 @@ public class OsmService {
 
         InputStream input = new FileInputStream(String.valueOf(valhallaFolder.resolve(osmFiles.getFirst())));
         OsmIterator iterator = new PbfIterator(input, true);
-        Map<Long, List<PlanetOsmLine>> nodeToWays = new HashMap<>();
         List<TrafficSignal> trafficSignals = new ArrayList<>();
         for (EntityContainer container : iterator) {
             switch (container.getType()) {
@@ -96,31 +77,12 @@ public class OsmService {
                     }
                     break;
                 case Way:
-                    OsmWay way = (OsmWay) container.getEntity();
-                    long wayId = way.getId();
-                    Optional<PlanetOsmLine> pLine = planetOsmLineRepository.findById(wayId);
-                    if (pLine.isPresent()) {
-                        for (int i = 0; i < way.getNumberOfNodes(); i++) {
-                            long nodeId = way.getNodeId(i);
-                            nodeToWays.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(pLine.get());
-                        }
-                    }
                     break;
                 case Relation:
                     break;
             }
         }
-        for (TrafficSignal signal : trafficSignals) {
-            long signalId = signal.getId();
-            List<PlanetOsmLine> ways = nodeToWays.get(signalId);
-
-            if (ways != null) {
-                for (PlanetOsmLine way : ways) {
-                    signal.addOsmLine(way);
-                }
-            }
-        }
-        return trafficSignals;
+        trafficSignalRepository.saveAll(trafficSignals);
     }
 
     private static List<List<Long>> parseListListLong(String raw) {
@@ -179,7 +141,6 @@ public class OsmService {
         Path baseDir = Paths.get("").toAbsolutePath();
         Path configFile = baseDir.resolve("common/src/main/resources/trafficSignal.config");
         FileInputStream input = new FileInputStream(configFile.toFile());
-        String content = fileReaderService.readFileFromPath(configFile.toString());
         Properties properties = new Properties();
         properties.load(input);
         String clustersString = properties.getProperty("forced_clusters");
@@ -233,8 +194,6 @@ public class OsmService {
         return trafficSignalRepository.findAll();
     }
 
-    public List<TrafficSignal> findTrafficSignalsByOsmLineId(Long osmLineId) { return trafficSignalRepository.findByOsmLineId(osmLineId); }
-
     public List<TrafficSignal> findTrafficSignalsByTrafficSignalClusterId(Long trafficSignalClusterId) {
         return trafficSignalRepository.findByTrafficSignalClusterId(trafficSignalClusterId);
     }
@@ -249,10 +208,6 @@ public class OsmService {
 
     public List<TrafficSignalCluster> findTrafficSignalClustersByOsmLineId(Long osmLineId) {
         return trafficSignalClusterRepository.findByOsmLineId(osmLineId);
-    }
-
-    public double getDistanceOsmLineTrafficSignal(Long osmLineId, Long trafficSignalId) {
-        return trafficSignalRepository.getDistanceOsmLineTrafficSignal(osmLineId, trafficSignalId);
     }
 
     public List<TrafficSignalCluster> getAllTrafficSignalClusters() {

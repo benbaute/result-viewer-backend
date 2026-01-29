@@ -120,6 +120,7 @@ public class SchedulingService {
 		}
 
         if (osmService.emptyTrafficSignals()) {
+            _logger.info("No traffic signals found, loading traffic signals.");
             try {
                 osmService.saveTrafficSignals();
             } catch (IOException e) {
@@ -128,7 +129,7 @@ public class SchedulingService {
             if (!osmService.emptyTrafficSignals()) {
                 osmService.setSpatialIndex();
             }
-		}
+        }
 
 		this.exportJsons();
 

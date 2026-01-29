@@ -16,10 +16,4 @@ public class OsmServiceTest {
 
 	@InjectMocks
 	private OsmService osmService;
-
-	@Test
-	public void testSomething() throws Exception {
-        List<TrafficSignal> trafficSignals = osmService.readOsmFile();
-        System.out.println(trafficSignals.size());
-	}
 }
