@@ -139,8 +139,8 @@ public class SchedulingService {
                 _logger.error("Failed to merge clusters.", e);
             }
             osmService.createClusterPolygons();
-            osmService.setStreetNames();
             osmService.populateClusterLineRelations();
+            osmService.setStreetNames();
         }
 
 
