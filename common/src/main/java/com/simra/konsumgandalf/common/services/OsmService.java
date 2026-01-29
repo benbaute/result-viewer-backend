@@ -1,13 +1,13 @@
-package com.simra.konsumgandalf.common.utils.services;
+package com.simra.konsumgandalf.common.services;
 
-import com.simra.konsumgandalf.common.models.classes.RideLoc;
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.repositories.TrafficSignalClusterRepository;
 import com.simra.konsumgandalf.common.repositories.TrafficSignalRepository;
-import de.topobyte.osm4j.core.access.OsmHandler;
+import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
+import com.simra.konsumgandalf.common.utils.services.FileReaderService;
 import de.topobyte.osm4j.core.access.OsmIterator;
 import de.topobyte.osm4j.core.model.iface.EntityContainer;
 import de.topobyte.osm4j.core.model.iface.OsmNode;
@@ -21,16 +21,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class OsmService {
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    private final Path valhallaFolder = Paths.get("valhalla/custom_files");
 
     @Autowired
     private CsvUtilService csvUtilService;
@@ -48,8 +51,8 @@ public class OsmService {
     private TrafficSignalClusterRepository trafficSignalClusterRepository;
 
     @Transactional
-    public int saveTrafficSignals(String filepath) throws IOException {
-        List<TrafficSignal> trafficSignals = readOsmFile(filepath);
+    public void saveTrafficSignals() throws IOException {
+        List<TrafficSignal> trafficSignals = readOsmFile();
 
         Set<Long> existingIds = new HashSet<>(trafficSignalRepository.getTrafficSignalIds());
         List<TrafficSignal> newSignals = new ArrayList<>();
@@ -60,12 +63,18 @@ public class OsmService {
             }
         }
         trafficSignalRepository.saveAll(newSignals);
-
-        return newSignals.size();
     }
 
-    public List<TrafficSignal> readOsmFile(String filepath) throws IOException {
-        InputStream input = new FileInputStream(filepath);
+    public List<TrafficSignal> readOsmFile() throws IOException {
+        List<String> osmFiles = listAvailableFiles().stream().filter(s -> s.endsWith(".osm.pbf")).toList();
+        if (osmFiles.isEmpty()) {
+            throw new IOException("No OSM files found");
+        }
+        if (osmFiles.size() > 1) {
+            throw new IOException("Multiple OSM files found");
+        }
+
+        InputStream input = new FileInputStream(String.valueOf(valhallaFolder.resolve(osmFiles.getFirst())));
         OsmIterator iterator = new PbfIterator(input, true);
         Map<Long, List<PlanetOsmLine>> nodeToWays = new HashMap<>();
         List<TrafficSignal> trafficSignals = new ArrayList<>();
@@ -135,6 +144,18 @@ public class OsmService {
             result.add(innerList);
         }
         return result;
+    }
+
+    private List<String> listAvailableFiles() {
+        try (Stream<Path> stream = Files.list(valhallaFolder)) {
+            return stream
+                .filter(Files::isRegularFile)
+                .map(Path::getFileName)
+                .map(Path::toString)
+                .collect(Collectors.toList());
+        } catch (IOException e) {
+            return List.of();
+        }
     }
 
     @Transactional

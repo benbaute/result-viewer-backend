@@ -20,6 +20,10 @@ public class TrafficSignal implements FeatureMappable {
     @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
     private Point geom;
 
+    // For accurate comparison in meters
+    @Column(columnDefinition = "geometry(Point,25833)")
+    private Point geom25833;
+
     @ManyToMany
     @JoinTable(
             name = "traffic_signal__planet_osm_line",

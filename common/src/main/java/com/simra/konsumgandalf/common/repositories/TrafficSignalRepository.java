@@ -14,6 +14,17 @@ import java.util.List;
 
 @Repository
 public interface TrafficSignalRepository extends JpaRepository<TrafficSignal, Long> {
+    @Modifying
+    @Transactional
+    @Query(value = """
+    UPDATE traffic_signal
+    SET geom25833 = ST_Transform(geom, 25833);
+
+    CREATE INDEX traffic_signal_geom25833_idx
+    ON traffic_signal USING GIST (geom25833);
+""", nativeQuery = true)
+    void setGeom25833();
+
     @Query(value = """
 			    SELECT id FROM TrafficSignal
 			""")
