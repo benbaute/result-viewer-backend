@@ -14,53 +14,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/osm")
 public class OsmController {
-
 	@Autowired
 	private OsmService osmService;
 
-    @PostMapping("/cluster")
-    public ResponseEntity<?> generateClusters() {
-        osmService.createClusters();
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/merge-cluster")
-    public ResponseEntity<?> mergeCluster() {
-        try {
-            int changed = osmService.mergeClusters();
-            return ResponseEntity.ok().body(Map.of("merged", changed));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getStackTrace()));
-        }
-    }
-
-    @PostMapping("/cluster-names")
-    public ResponseEntity<?> generateClusterNames() {
-        osmService.updateNames();
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/cluster-polygons")
-    public ResponseEntity<?> generateClusterPolygons() {
-        osmService.createClusterPolygons();
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/cluster-polygons-osm-lines")
-    public ResponseEntity<?> populateClusterLineRelations() {
-        osmService.populateClusterLineRelations();
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/cluster-complete")
-    public ResponseEntity<?> generateClusterComplete() {
-        generateClusters();
-        mergeCluster();
-        generateClusterNames();
-        generateClusterPolygons();
-        populateClusterLineRelations();
-        return ResponseEntity.ok().build();
-    }
 
     @GetMapping("/traffic-signals")
     public ResponseEntity<Map<String, Object>> getAllTrafficSignals() {

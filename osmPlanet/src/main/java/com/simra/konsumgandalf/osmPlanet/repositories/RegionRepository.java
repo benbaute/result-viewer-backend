@@ -1,9 +1,9 @@
 package com.simra.konsumgandalf.osmPlanet.repositories;
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
-import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
-import com.simra.konsumgandalf.common.models.entities.Region;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -11,9 +11,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
+import com.simra.konsumgandalf.common.models.entities.Region;
 
 public interface RegionRepository extends JpaRepository<Region, Long> {
 
@@ -79,25 +78,25 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 WITH edges AS (
     SELECT
         edge.ride_id,
-        edge_region.region_id,
+        intersection_edge__region.region_id,
         SUM(length)   AS edge_length,
         SUM(duration) AS edge_duration,
         SUM(waiting_time) AS edge_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
     FROM intersection_edge edge
-    JOIN edge_region ON edge.id = edge_region.edge_id
-    GROUP BY edge.ride_id, edge_region.region_id
+    JOIN intersection_edge__region ON edge.id = intersection_edge__region.edge_id
+    GROUP BY edge.ride_id, intersection_edge__region.region_id
 ), nodes AS (
     SELECT
         node.ride_id,
-        node_region.region_id,
+        intersection_node__region.region_id,
         SUM(length)   AS node_length,
         SUM(duration) AS node_duration,
         SUM(waiting_time) AS node_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
     FROM intersection_node node
-    JOIN node_region ON node.id = node_region.node_id
-    GROUP BY node.ride_id, node_region.region_id
+    JOIN intersection_node__region ON node.id = intersection_node__region.node_id
+    GROUP BY node.ride_id, intersection_node__region.region_id
 ), combination AS (
     SELECT
         e.ride_id,

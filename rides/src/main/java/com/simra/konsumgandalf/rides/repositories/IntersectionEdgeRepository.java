@@ -1,14 +1,14 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
-import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
-import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
 
 @Repository
 public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEdge, Long> {
@@ -56,7 +56,7 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
                 :region IS NULL
                 OR EXISTS (
                     SELECT 1
-                    FROM edge_region er
+                    FROM intersection_edge__region er
                     JOIN region r ON r.name = er.region_id
                     WHERE er.edge_id = edge.id
                     AND r.name = :region

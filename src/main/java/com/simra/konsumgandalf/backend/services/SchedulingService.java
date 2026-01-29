@@ -127,9 +127,22 @@ public class SchedulingService {
                 _logger.error("Error while loading traffic signals", e);
             }
             if (!osmService.emptyTrafficSignals()) {
-                osmService.setSpatialIndex();
+                osmService.setSpatialIndexOnSignals();
             }
         }
+        if (osmService.emptyTrafficSignalClusters() && !osmService.emptyTrafficSignals()) {
+            _logger.info("No traffic signal clusters found, creating clusters.");
+            osmService.createClusters();
+            try {
+                osmService.mergeClusters();
+            } catch (IOException e) {
+                _logger.error("Failed to merge clusters.", e);
+            }
+            osmService.createClusterPolygons();
+            osmService.setStreetNames();
+            osmService.populateClusterLineRelations();
+        }
+
 
 		this.exportJsons();
 

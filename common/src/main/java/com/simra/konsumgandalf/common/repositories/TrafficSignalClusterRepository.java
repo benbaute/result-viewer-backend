@@ -1,6 +1,5 @@
 package com.simra.konsumgandalf.common.repositories;
 
-import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,90 +14,95 @@ public interface TrafficSignalClusterRepository extends JpaRepository<TrafficSig
     @Modifying
     @Transactional
     @Query(value = """
-
-WITH projected AS (
-    SELECT DISTINCT t.id, ST_Transform(geom, 25833) AS geom_utm,
-           CASE
-               WHEN l.highway = 'primary' OR l.highway = 'secondary' OR l.highway = 'cycleway' OR l.highway = 'path' THEN 80
-               ELSE 40
-            END AS influence_radius
-    FROM traffic_signal t
-    JOIN traffic_signal__planet_osm_line tl
-    ON t.id = tl.traffic_signal_id
-    JOIN planet_osm_line l
-    ON tl.osm_line_id = l.osm_id
-),
-clusters AS (
-    SELECT unnest(ST_ClusterWithin(geom_utm, influence_radius)) AS cluster_geom
-    FROM projected
+WITH clusters AS (
+    SELECT id, ST_ClusterDBSCAN(geom25833, eps => 70, minpoints => 1) OVER () AS cluster_geom
+    FROM traffic_signal
 ),
 clusterized AS (
-    SELECT
-        array_agg(p.id) AS original_signal_ids
-    FROM projected p
-    JOIN clusters c
-      ON ST_Within(p.geom_utm, c.cluster_geom)
+    SELECT array_agg(t.id) AS original_signal_ids
+    FROM traffic_signal t
+    JOIN clusters c ON t.id = c.id
     GROUP BY c.cluster_geom
 )
 INSERT INTO traffic_signal_cluster (original_signal_ids)
 SELECT original_signal_ids
 FROM clusterized;
 """, nativeQuery = true)
-    void generateClusters();
+    void setSignalIdsOnCluster();
 
     @Modifying
     @Transactional
     @Query(value = """
     UPDATE traffic_signal_cluster c
     SET geom = (
-        SELECT ST_Transform(ST_Buffer(ST_ConvexHull(ST_Collect(ST_Transform(t.geom, 25833))), 25, 'quad_segs=2'), 4326)
+        SELECT ST_Transform(ST_Buffer(ST_ConvexHull(ST_Collect(geom25833)), 25, 'quad_segs=2'), 4326)
         FROM traffic_signal t
         WHERE t.id = ANY(c.original_signal_ids)
+    );
+""", nativeQuery = true)
+    void setClusterGeometry();
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+    UPDATE traffic_signal_cluster c
+    SET geom3857 = (
+        SELECT ST_Transform(geom, 3857)
     )
 """, nativeQuery = true)
-    void updateClusterPolygons();
+    void setClusterGeometry3857();
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+    CREATE INDEX traffic_signal_cluster_geom_3857_idx
+    ON traffic_signal_cluster
+    USING GIST (geom3857);
+""", nativeQuery = true)
+    void setSpatialIndex();
 
 
     @Modifying
     @Transactional
     @Query(value = """
-WITH traffic_signal_cluster_projected AS (
-    SELECT id, ST_Transform(geom, 25833) AS geom_utm
-    FROM traffic_signal_cluster
-),
-planet_osm_line_projected AS (
-    SELECT osm_id, ST_Transform(way, 25833) AS geom_utm
-    FROM planet_osm_line
-),
-intersection AS (
-SELECT
-    c.id AS cluster_id,
-    l.osm_id AS line_id
-FROM planet_osm_line_projected l
-JOIN traffic_signal_cluster_projected c
-ON ST_Intersects(l.geom_utm, c.geom_utm))
+
+WITH intersection AS (
+    SELECT
+        c.id AS cluster_id,
+        l.osm_id AS line_id
+    FROM planet_osm_line l
+    JOIN traffic_signal_cluster c
+    ON ST_Intersects(l.way, c.geom3857)
+    WHERE l.highway is not null
+    AND l.highway NOT IN ('construction', 'elevator', 'motorway', 'motorway_link', 'platform', 'proposed')
+)
 INSERT INTO traffic_signal_cluster__planet_osm_line (traffic_signal_cluster_id, osm_id)
 SELECT cluster_id, line_id
 FROM intersection
 """, nativeQuery = true)
     void populateClusterLineRelations();
 
-
+    @Modifying
+    @Transactional
     @Query(value = """
-        SELECT name FROM (
+    UPDATE traffic_signal_cluster c
+    SET osm_lines_name = (
+        SELECT array_agg(name) FROM (
         SELECT name, Count(line.name) AS c
   		FROM planet_osm_line line
   		JOIN traffic_signal_cluster__planet_osm_line cluster
   		ON line.osm_id = cluster.osm_id
-  		WHERE cluster.traffic_signal_cluster_id = :trafficSignalClusterId
+  		WHERE cluster.traffic_signal_cluster_id = c.id
   		AND name is not null
   		AND surface is not null
 		AND highway is not null
         AND highway != 'footway'
   		GROUP BY name
   		ORDER BY c) as t
+    );
+
 """, nativeQuery = true)
-    List<String> getNames(Long trafficSignalClusterId);
+    void setStreetNames();
 
 
     @Query(value = """

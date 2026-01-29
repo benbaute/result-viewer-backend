@@ -1,18 +1,28 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import jakarta.persistence.*;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.Polygon;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Polygon;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.ColumnResult;
+import jakarta.persistence.ConstructorResult;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.NamedNativeQuery;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.SqlResultSetMapping;
 
 /**
  * Represents an administrative region like a state or a city.
@@ -41,24 +51,24 @@ import java.util.Objects;
         query = """
 WITH edges AS (
     SELECT
-        edge_region.region_id,
+        intersection_edge__region.region_id,
         SUM(length) / 1000  AS edge_length_km,
         SUM(waiting_time) AS edge_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
     FROM intersection_edge edge
-    JOIN edge_region ON edge.id = edge_region.edge_id
-    GROUP BY edge_region.region_id
+    JOIN intersection_edge__region ON edge.id = intersection_edge__region.edge_id
+    GROUP BY intersection_edge__region.region_id
 ), nodes AS (
     SELECT
         COUNT(DISTINCT node.ride_id) AS number_of_rides,
         COUNT(*) AS node_count,
-        node_region.region_id,
+        intersection_node__region.region_id,
         SUM(length) / 1000 AS node_length_km,
         SUM(waiting_time) AS node_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
     FROM intersection_node node
-    JOIN node_region ON node.id = node_region.node_id
-    GROUP BY node_region.region_id
+    JOIN intersection_node__region ON node.id = intersection_node__region.node_id
+    GROUP BY intersection_node__region.region_id
 )
     SELECT
         way AS geom,

@@ -759,7 +759,7 @@ public class RideService {
             }
             if (names.isEmpty()) {
                 List<String> namesCluster = cluster.getOsmLinesName();
-                for (int i = 0; i < namesCluster.size() && i < 2; i++) {
+                for (int i = 0; namesCluster != null && i < namesCluster.size()  && i < 2; i++) {
                     names.add(namesCluster.get(i));
                 }
             }

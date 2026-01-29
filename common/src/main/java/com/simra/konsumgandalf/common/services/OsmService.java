@@ -122,12 +122,15 @@ public class OsmService {
 
     @Transactional
     public void createClusters() {
-        trafficSignalClusterRepository.generateClusters();
+        trafficSignalClusterRepository.setSignalIdsOnCluster();
     }
 
+    @Modifying
     @Transactional
     public void createClusterPolygons() {
-        trafficSignalClusterRepository.updateClusterPolygons();
+        trafficSignalClusterRepository.setClusterGeometry();
+        trafficSignalClusterRepository.setClusterGeometry3857();
+        trafficSignalClusterRepository.setSpatialIndex();
     }
 
     @Transactional
@@ -181,13 +184,8 @@ public class OsmService {
     }
 
     @Transactional
-    public void updateNames() {
-        List<TrafficSignalCluster> clusters = trafficSignalClusterRepository.findAll();
-        for (TrafficSignalCluster cluster : clusters) {
-            List<String> names = trafficSignalClusterRepository.getNames(cluster.getId());
-            cluster.setOsmLinesName(names);
-            trafficSignalClusterRepository.save(cluster);
-        }
+    public void setStreetNames() {
+        trafficSignalClusterRepository.setStreetNames();
     }
 
     public List<TrafficSignal> getAllTrafficSignals() {
@@ -214,11 +212,16 @@ public class OsmService {
         return trafficSignalClusterRepository.findAll();
     }
 
+    public void setSpatialIndexOnSignals() {
+        trafficSignalRepository.setGeom25833();
+        trafficSignalRepository.setSpatialIndex();
+    }
+
     public boolean emptyTrafficSignals() {
         return trafficSignalRepository.count() == 0;
     }
 
-    public void setSpatialIndex() {
-        trafficSignalRepository.setGeom25833();
+    public boolean emptyTrafficSignalClusters() {
+        return trafficSignalClusterRepository.count() == 0;
     }
 }

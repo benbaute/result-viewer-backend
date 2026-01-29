@@ -1,13 +1,26 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.locationtech.jts.geom.LineString;
 
-import java.util.*;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+
+import jakarta.persistence.ColumnResult;
+import jakarta.persistence.ConstructorResult;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedNativeQuery;
+import jakarta.persistence.SqlResultSetMapping;
+import lombok.Getter;
+import lombok.Setter;
 
 
 @Getter
@@ -82,7 +95,7 @@ import java.util.*;
                 :region IS NULL
                 OR EXISTS (
                     SELECT 1
-                    FROM node_region nr
+                    FROM intersection_node__region nr
                     JOIN region r ON r.name = nr.region_id
                     WHERE nr.node_id = node.id
                     AND r.name = :region
@@ -113,7 +126,7 @@ public class IntersectionNode extends IntersectionBaseClass implements FeatureMa
 
     @ManyToMany
     @JoinTable(
-            name = "node_region",
+            name = "intersection_node__region",
             joinColumns = @JoinColumn(name = "node_id"),
             inverseJoinColumns = @JoinColumn(name = "region_id")
     )

@@ -29,6 +29,10 @@ public class TrafficSignalCluster implements FeatureMappable {
     @Column(columnDefinition = "geometry(Polygon,4326)")
     private Polygon geom;
 
+    // For spatial joins with planet osm line
+    @Column(columnDefinition = "geometry(Polygon,3857)")
+    private Polygon geom3857;
+
     @Column(columnDefinition = "bigint[]")
     private List<Long> originalSignalIds;
 
