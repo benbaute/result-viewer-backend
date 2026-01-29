@@ -258,4 +258,12 @@ public class OsmService {
     public List<TrafficSignalCluster> getAllTrafficSignalClusters() {
         return trafficSignalClusterRepository.findAll();
     }
+
+    public boolean emptyTrafficSignals() {
+        return trafficSignalRepository.count() == 0;
+    }
+
+    public void setSpatialIndex() {
+        trafficSignalRepository.setGeom25833();
+    }
 }

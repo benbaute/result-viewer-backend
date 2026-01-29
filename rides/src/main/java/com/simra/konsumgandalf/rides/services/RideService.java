@@ -12,7 +12,7 @@ import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
 import com.simra.konsumgandalf.common.utils.services.FileReaderService;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
-import com.simra.konsumgandalf.common.utils.services.OsmService;
+import com.simra.konsumgandalf.common.services.OsmService;
 import com.simra.konsumgandalf.osmPlanet.repositories.RegionRepository;
 import com.simra.konsumgandalf.rides.repositories.*;
 import com.simra.konsumgandalf.valhalla.services.ValhallaMapMatchingService;

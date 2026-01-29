@@ -1,7 +1,7 @@
 package com.simra.konsumgandalf.common.utils.services;
 
-import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
+import com.simra.konsumgandalf.common.services.OsmService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,7 +19,7 @@ public class OsmServiceTest {
 
 	@Test
 	public void testSomething() throws Exception {
-        List<TrafficSignal> trafficSignals = osmService.readOsmFile("../postgis/data/berlin-latest.osm.pbf");
+        List<TrafficSignal> trafficSignals = osmService.readOsmFile();
         System.out.println(trafficSignals.size());
 	}
 }

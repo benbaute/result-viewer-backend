@@ -29,6 +29,9 @@ public class SchedulingService {
 	@Autowired
 	private RideService rideService;
 
+    @Autowired
+    private OsmService osmService;
+
 	@Autowired
 	private RideEntityService rideEntityService;
 
@@ -113,6 +116,17 @@ public class SchedulingService {
 		if (profileService.count() <= 3000L) {
 			_logger.info("No profile data found, calculating safety metrics for profiles");
 			readNewProfilesAndCalculateSafetyMetrics();
+		}
+
+        if (osmService.emptyTrafficSignals()) {
+            try {
+                osmService.saveTrafficSignals();
+            } catch (IOException e) {
+                _logger.error("Error while loading traffic signals", e);
+            }
+            if (!osmService.emptyTrafficSignals()) {
+                osmService.setSpatialIndex();
+            }
 		}
 
 		this.exportJsons();
