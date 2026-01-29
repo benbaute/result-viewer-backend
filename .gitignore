@@ -39,3 +39,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+
+### Valhalla ###
+*.osm.pbf
+**/custom_files/
