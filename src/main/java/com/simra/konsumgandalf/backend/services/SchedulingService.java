@@ -1,6 +1,7 @@
 package com.simra.konsumgandalf.backend.services;
 
 import com.simra.konsumgandalf.common.constants.CronExpressions;
+import com.simra.konsumgandalf.common.services.OsmService;
 import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceHighwayMetrics;
 import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceRegionMetrics;
 import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceSimraRegionMetrics;
