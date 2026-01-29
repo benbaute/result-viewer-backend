@@ -56,43 +56,18 @@ public class AnalyticsServiceHighwayMetrics {
 	}
 
 	@LogExecutionTime
-	@Transactional
 	public void calculateSafetyMetricsHighway() {
 		long startTime = System.nanoTime();
-
-		List<CompletableFuture<Void>> listOfProcessedStreets = new ArrayList<>();
-		AtomicInteger pageCounter = new AtomicInteger(0);
+        int i = 0;
 
 		_logger.info("Started to analyse planetOsmLine metrics");
 		while (true) {
-			final int count = pageCounter.getAndIncrement();
-			List<PlanetOsmLine> fetchedStreets = osmHighwayRepository.findAllStreets(PageRequest.of(count, PAGE_SIZE));
+			List<PlanetOsmLine> fetchedStreets = osmHighwayRepository.findAllStreets(PageRequest.of(i, PAGE_SIZE));
+            i++;
 			if (fetchedStreets.isEmpty()) {
 				break;
 			}
-
-			CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 				updateSafetyMetrics(fetchedStreets);
-			});
-
-			listOfProcessedStreets.add(future);
-
-			// pool size is 16, so we need to wait for 16 futures to complete
-			if (listOfProcessedStreets.size() >= 16) {
-				_logger.info("Waiting for 16 futures to complete. Running for {} seconds.",
-						(System.nanoTime() - startTime) / 1e9);
-				CompletableFuture.allOf(listOfProcessedStreets.toArray(new CompletableFuture[0])).join();
-				pageCounter.set(0);
-				listOfProcessedStreets.clear();
-			}
-		}
-
-		CompletableFuture.allOf(listOfProcessedStreets.toArray(new CompletableFuture[0])).join();
-
-		List<PlanetOsmLine> fetchedStreets = osmHighwayRepository
-			.findAllStreets(PageRequest.of(pageCounter.get(), PAGE_SIZE));
-		if (!fetchedStreets.isEmpty()) {
-			calculateSafetyMetricsHighway();
 		}
 		_logger.info("All highway information updated in {} seconds.", (System.nanoTime() - startTime) / 1e9);
 	}
@@ -101,6 +76,7 @@ public class AnalyticsServiceHighwayMetrics {
 	 * This method updates the safety metrics for a list of streets.
 	 * @param streets - The list of streets to update the safety metrics for
 	 */
+    @Transactional
 	void updateSafetyMetrics(List<PlanetOsmLine> streets) {
 		ArrayList<SafetyMetricsPlanetOsmLine> safetyMetricsPlanetOsmLineList = new ArrayList<SafetyMetricsPlanetOsmLine>();
 		for (PlanetOsmLine street : streets) {

@@ -56,14 +56,17 @@ public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 			@Param("tolerance") double tolerance, @Param("trafficTime") String trafficTime,
 			@Param("weekDay") String weekDay, @Param("year") int year);
 
-	@EntityGraph(attributePaths = { "rideIncident" })
-	@Query("""
-				SELECT p
-				FROM PlanetOsmLine p
-				WHERE p.lastModified IS NOT NULL
-				AND (p.lastAnalysed IS NULL OR p.lastModified > p.lastAnalysed)
-			""")
+	@Query(value = """
+            SELECT DISTINCT *
+            FROM planet_osm_line p
+            WHERE EXISTS(
+                SELECT 1
+                FROM ride_entity__planet_osm_line r
+                WHERE r.planet_osm_lines_osm_id = p.osm_id
+            )
+        """, nativeQuery = true)
 	// AND (p.rideEntities IS NOT EMPTY OR p.rideIncident IS NOT EMPTY)
+    // As incidents happens on rides, checking for rides is sufficient
 	List<PlanetOsmLine> findAllStreets(Pageable pageable);
 
 	@Query("""
