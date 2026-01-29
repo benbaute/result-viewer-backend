@@ -109,8 +109,9 @@ public class RideService {
 							if (ride == null) {
 								throw new Error("Empty Ride");
 							}
+                            rideRepository.save(ride);
                             saveRide(ride);
-							rideRepository.save(ride);
+
                             int count = counter.incrementAndGet();
 							_logger.info("[{}] Processed file: {}", count, path);
 						}
