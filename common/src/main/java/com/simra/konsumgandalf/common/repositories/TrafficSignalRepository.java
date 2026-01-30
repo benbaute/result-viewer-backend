@@ -17,23 +17,20 @@ public interface TrafficSignalRepository extends JpaRepository<TrafficSignal, Lo
     @Modifying
     @Transactional
     @Query(value = """
-    UPDATE traffic_signal
-    SET geom25833 = ST_Transform(geom, 25833);
+    INSERT INTO traffic_signal (id, geom, geom25833)
+    SELECT
+        n.id,
+        ST_SetSRID(ST_MakePoint(lon / 1e7, lat / 1e7), 4326),
+        ST_Transform(ST_SetSRID(ST_MakePoint(lon / 1e7, lat / 1e7), 4326), 25833)
+    FROM planet_osm_nodes n
+    WHERE tags->>'highway' = 'traffic_signals'
+    AND NOT EXISTS (
+        SELECT 1
+        FROM traffic_signal t
+        WHERE t.id = n.id
+    );
 """, nativeQuery = true)
-    void setGeom25833();
-
-    @Modifying
-    @Transactional
-    @Query(value = """
-    CREATE INDEX traffic_signal_geom25833_idx
-    ON traffic_signal USING GIST (geom25833);
-""", nativeQuery = true)
-    void setSpatialIndex();
-
-    @Query(value = """
-			    SELECT id FROM TrafficSignal
-			""")
-    List<Long> getTrafficSignalIds();
+    void saveTrafficSignals();
 
 
     @Query(value = """

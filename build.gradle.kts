@@ -31,9 +31,6 @@ allprojects {
             setUrl("https://repo.osgeo.org/repository/release/")
         }
         maven {
-            setUrl("https://mvn.topobyte.de")
-        }
-        maven {
             setUrl("https://mvn.slimjars.com")
         }
         mavenLocal()

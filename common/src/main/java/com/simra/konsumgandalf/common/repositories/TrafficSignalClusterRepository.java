@@ -52,15 +52,6 @@ FROM clusterized;
 """, nativeQuery = true)
     void setClusterGeometry3857();
 
-    @Modifying
-    @Transactional
-    @Query(value = """
-    CREATE INDEX traffic_signal_cluster_geom_3857_idx
-    ON traffic_signal_cluster
-    USING GIST (geom3857);
-""", nativeQuery = true)
-    void setSpatialIndex();
-
 
     @Modifying
     @Transactional

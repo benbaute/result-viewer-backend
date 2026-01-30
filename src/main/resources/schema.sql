@@ -82,6 +82,10 @@ CREATE INDEX IF NOT EXISTS idx_region_way_gist ON region USING GIST (way);
 CREATE INDEX IF NOT EXISTS idx_simra_region_way_gist ON region USING GIST (way);
 CREATE INDEX IF NOT EXISTS idx_ride_entity_way_gist ON simra_region USING GIST (way);
 
+--- Set indexes for intersection
+CREATE INDEX IF NOT EXISTS traffic_signal_geom25833_idx ON traffic_signal USING GIST (geom25833);
+CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signal_cluster USING GIST (geom3857);
+
 ---Set Index for filtering streets
 CREATE INDEX IF NOT EXISTS idx_planetosmline_lower_name_prefix
 ON planet_osm_line (lower(name))

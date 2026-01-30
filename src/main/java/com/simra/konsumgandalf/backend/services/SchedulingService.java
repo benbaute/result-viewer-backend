@@ -122,18 +122,11 @@ public class SchedulingService {
 
         if (osmService.emptyTrafficSignals()) {
             _logger.info("No traffic signals found, loading traffic signals.");
-            try {
-                osmService.saveTrafficSignals();
-            } catch (IOException e) {
-                _logger.error("Error while loading traffic signals", e);
-            }
-            if (!osmService.emptyTrafficSignals()) {
-                osmService.setSpatialIndexOnSignals();
-            }
+            osmService.saveTrafficSignals();
         }
         if (osmService.emptyTrafficSignalClusters() && !osmService.emptyTrafficSignals()) {
             _logger.info("No traffic signal clusters found, creating clusters.");
-            osmService.createClusters();
+            osmService.setSignalIdsOnCluster();
             try {
                 osmService.mergeClusters();
             } catch (IOException e) {

@@ -31,8 +31,6 @@ dependencies {
     api("org.geotools:gt-metadata:33.3") {
         exclude("javax.media", "jai_core")
     }
-    implementation("de.topobyte:osm4j-core:1.4.1")
-    implementation("de.topobyte:osm4j-pbf:1.4.1")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
