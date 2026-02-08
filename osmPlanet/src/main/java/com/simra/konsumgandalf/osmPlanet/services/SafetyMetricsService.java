@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.services;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.models.classes.PageResult;
 import com.simra.konsumgandalf.common.models.entities.SafetyMetricsPlanetOsmLine;
 import com.simra.konsumgandalf.common.models.entities.SafetyMetricsRegion;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 public class SafetyMetricsService {
 
 	@Autowired
-	private SafetyMetricsPlanetOsmLineRepository safetyMetricsRepository;
+	private SafetyMetricsPlanetOsmLineRepository safetyMetricsPlanetOsmLineRepository;
 
 	@Autowired
 	private SafetyMetricsRegionRepository safetyMetricsRegionRepository;
@@ -45,7 +46,7 @@ public class SafetyMetricsService {
 
 	public Optional<SafetyMetricsPlanetOsmLine> getSafetyMetricsOfStreet(long id, TrafficTimes trafficTime,
 			WeekDays weekDay, int year) {
-		return safetyMetricsRepository.findByStreetId(id, trafficTime, weekDay, year);
+		return safetyMetricsPlanetOsmLineRepository.findByStreetId(id, trafficTime, weekDay, year);
 	}
 
 	@Cacheable(value = "streetsMetrics",
@@ -62,7 +63,7 @@ public class SafetyMetricsService {
 				name, highwayType, minDangerousScore, maxDangerousScore, minNumberOfRides, minNumberOfIncidents,
 				trafficTime, weekDay, year, regionWay);
 
-		Page<SafetyMetricsLineDTO> page = safetyMetricsRepository.findAll(spec, pageable)
+		Page<SafetyMetricsLineDTO> page = safetyMetricsPlanetOsmLineRepository.findAll(spec, pageable)
 			.map(safetyMetrics -> new SafetyMetricsLineDTO(safetyMetrics.getPlanetOsmLine().getId(),
 					safetyMetrics.getPlanetOsmLine().getName(), safetyMetrics.getPlanetOsmLine().getHighway(),
 					safetyMetrics.getDangerousScore(), safetyMetrics.getDangerousColor(),
@@ -116,7 +117,7 @@ public class SafetyMetricsService {
 
 	@Cacheable(value = "getMetricsForHighways", key = "T(java.util.Objects).hash(#p0, #p1, #p2)")
 	public Map<String, String> getMetricsForHighways(TrafficTimes trafficTimes, WeekDays weekDay, int year) {
-		return safetyMetricsRepository.getFilteredSafetyMetrics(trafficTimes, weekDay, year)
+		return safetyMetricsPlanetOsmLineRepository.getFilteredSafetyMetrics(trafficTimes, weekDay, year)
 			.stream()
 			.collect(Collectors.toMap(SafetyMetricDTO::getOsmId, SafetyMetricDTO::getDangerousColor));
 	}
@@ -128,4 +129,10 @@ public class SafetyMetricsService {
 			.collect(Collectors.toMap(SafetyMetricRegionDTO::getName, SafetyMetricRegionDTO::getDangerousColor));
 	}
 
+    @LogExecutionTime
+    public void updateSafetyMetrics () {
+        safetyMetricsPlanetOsmLineRepository.updateSafetyMetricsPlanetOsmLine();
+        safetyMetricsRegionRepository.updateSafetyMetricsRegion();
+        safetyMetricsSimraRegionRepository.updateSafetyMetricsSimraRegion();
+    }
 }

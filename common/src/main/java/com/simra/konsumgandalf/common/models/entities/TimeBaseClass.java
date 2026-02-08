@@ -6,21 +6,23 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.PrePersist;
-import org.checkerframework.checker.units.qual.Time;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @MappedSuperclass
 public class TimeBaseClass {
 
-	@Column(length = 21, nullable = true)
+	@Column(length = 21)
 	@Enumerated(EnumType.STRING)
 	private TrafficTimes trafficTime;
 
-	@Column(length = 12, nullable = true)
+	@Column(length = 12)
 	@Enumerated(EnumType.STRING)
 	private WeekDays weekDay;
 
-	@Column(nullable = true)
+	@Column
 	private Integer year;
 
 	protected TimeBaseClass() {
@@ -31,29 +33,4 @@ public class TimeBaseClass {
 		this.weekDay = weekDay;
 		this.year = year;
 	}
-
-	public TrafficTimes getTrafficTime() {
-		return trafficTime;
-	}
-
-	public void setTrafficTime(TrafficTimes trafficTime) {
-		this.trafficTime = trafficTime;
-	}
-
-	public WeekDays getWeekDay() {
-		return weekDay;
-	}
-
-	public void setWeekDay(WeekDays weekDay) {
-		this.weekDay = weekDay;
-	}
-
-	public Integer getYear() {
-		return year;
-	}
-
-	public void setYear(Integer year) {
-		this.year = year;
-	}
-
 }

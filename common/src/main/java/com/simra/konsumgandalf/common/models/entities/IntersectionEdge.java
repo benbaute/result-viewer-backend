@@ -1,26 +1,15 @@
 package com.simra.konsumgandalf.common.models.entities;
 
+import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.locationtech.jts.geom.LineString;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.locationtech.jts.geom.LineString;
-
-import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-
-import jakarta.persistence.ColumnResult;
-import jakarta.persistence.ConstructorResult;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.NamedNativeQuery;
-import jakarta.persistence.SqlResultSetMapping;
-import lombok.Getter;
-import lombok.Setter;
 
 
 @Getter
@@ -92,7 +81,7 @@ import lombok.Setter;
                 OR EXISTS (
                     SELECT 1
                     FROM intersection_edge__region er
-                    JOIN region r ON r.name = er.region_id
+                    JOIN region r ON r.id = er.region_id
                     WHERE er.edge_id = edge.id
                     AND r.name = :region
                 )
@@ -146,7 +135,7 @@ public class IntersectionEdge extends IntersectionBaseClass implements FeatureMa
     }
 
     @Override
-    public void setRegions(Set<Region>  regions) {
-        this.regions = regions;
+    public Set<Region>  getRegions() {
+        return this.regions;
     }
 }

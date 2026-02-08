@@ -1,7 +1,6 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 import com.simra.konsumgandalf.common.models.entities.MatchedPoint;
-import com.simra.konsumgandalf.common.models.entities.RidePoint;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -5,7 +5,6 @@ import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
-
 import java.util.Date;
 import java.util.Map;
 

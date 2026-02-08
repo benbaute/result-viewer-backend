@@ -1,20 +1,11 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.simra.konsumgandalf.common.models.classes.RideLoc;
-import com.simra.konsumgandalf.common.models.classes.RideLocation;
-import com.simra.konsumgandalf.common.models.enums.BikeType;
-import com.simra.konsumgandalf.common.models.enums.PhoneLocation;
-import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-import com.simra.konsumgandalf.common.models.enums.WeekDays;
-import com.simra.konsumgandalf.common.models.maps.TrafficTimesMapper;
+import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.geolatte.geom.Geometry;
-import java.util.*;
 
-import static com.simra.konsumgandalf.common.constants.AppDates.FALLBACK_DATE_MILLIS;
+import java.util.ArrayList;
 
 /**
  * Contains metadata for a ride.
@@ -32,11 +23,12 @@ public class Ride {
 	private String path;
 
 	@Transient
-	private List<RideLoc> rideLocations = new ArrayList<>();
+	private ArrayList<MatchInformation> coordinates;
 
-	public Ride(String path) {
-		this.path = path;
-	}
 	public Ride() {
 	}
+
+    public Ride (String path) {
+        this.path = path;
+    }
 }

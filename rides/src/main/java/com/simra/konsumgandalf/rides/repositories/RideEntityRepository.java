@@ -3,19 +3,14 @@ package com.simra.konsumgandalf.rides.repositories;
 import com.simra.konsumgandalf.common.models.entities.RideEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 
 @Repository
 public interface RideEntityRepository extends JpaRepository<RideEntity, Long> {
-
-	@Query("SELECT COUNT(r) > 0 FROM RideEntity r WHERE r.path = :rideId")
-	boolean existsByPath(String rideId);
-
 	@Query(value = """
 				SELECT
 					 array_agg(DISTINCT ST_AsGeoJSON(st_transform(r.way, 4326))) as visited_way,
@@ -33,7 +28,11 @@ public interface RideEntityRepository extends JpaRepository<RideEntity, Long> {
 			nativeQuery = true)
 	Map<String, String[]> findRideGeometries(long rideId);
 
-	@Query(value = "SELECT r.path FROM RideEntity r")
-	List<String> findAllPaths();
 
+    @Query("""
+    SELECT r.path
+    FROM RideEntity r
+    WHERE r.path IN :paths
+    """)
+    List<String> findExistingPaths(@Param("paths") List<String> paths);
 }

@@ -1,15 +1,14 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 
-import java.util.List;
-
+import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
+import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
-import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
+import java.util.List;
 
 @Repository
 public interface IntersectionNodeRepository extends JpaRepository<IntersectionNode, Long> {
@@ -45,7 +44,7 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
     @Query(value = """
     SELECT DISTINCT node.street_names
     FROM (
-        SELECT MIN(node.id) AS example_id, Count(*) as count,
+        SELECT MIN(node.id) AS example_id, Count(*) as count
         FROM intersection_node node
         WHERE street_names ILIKE CONCAT('%', :streetNames, '%')
         AND (:trafficSignalClusterId IS NULL OR :trafficSignalClusterId = traffic_signal_cluster_id)
@@ -54,7 +53,7 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
                 OR EXISTS (
                     SELECT 1
                     FROM intersection_node__region nr
-                    JOIN region r ON r.name = nr.region_id
+                    JOIN region r ON r.id = nr.region_id
                     WHERE nr.node_id = node.id
                     AND r.name = :region
                 )

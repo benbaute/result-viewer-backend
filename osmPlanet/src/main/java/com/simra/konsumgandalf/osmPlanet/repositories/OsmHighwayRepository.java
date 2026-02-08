@@ -4,16 +4,12 @@ import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.FindNumberOfRidesWithinStreetSegmentInTimePeriodDTO;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.RideEntityDTO;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,53 +17,34 @@ import java.util.Optional;
 @Repository
 public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 
-	@Modifying
-	@Query("UPDATE PlanetOsmLine p SET p.lastAnalysed = :timestamp WHERE p.id IN :ids")
-	void updateLastAnalysedByIds(Collection<Long> ids, Instant timestamp);
-
 	@Query(value = """
 			    WITH transformed_point AS (
 			                 SELECT ST_Transform(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326), 3857) AS pt
 			             )
 			             SELECT
-			                 planet_osm_line.osm_id,
-			                 ST_AsGeoJSON(ST_Transform(ST_Simplify(planet_osm_line.way, :tolerance), 4326)) as way,
+			                 pl.osm_id,
+			                 ST_AsGeoJSON(ST_Transform(ST_Simplify(pl.way, :tolerance), 4326)) as way,
 			                 sm.dangerous_color
 			             FROM
 			                 public.planet_osm_line as pl
-			                 WHERE pl.last_modified IS NOT NULL AND last_analysed IS NOT NULL
 			             JOIN
 			                 transformed_point
-			                 ON planet_osm_line.way && ST_Buffer(transformed_point.pt, :distanceFilter)
+			                 ON pl.way && ST_Buffer(transformed_point.pt, :distanceFilter)
 			             LEFT JOIN
-			                 safety_metrics_planet_osm_line AS sm
-			                 ON planet_osm_line.osm_id = sm.planet_osm_line_osm_id
+			                 safety_metrics__planet_osm_line AS sm
+			                 ON pl.osm_id = sm.osm_id
 			                 AND sm.traffic_time = :trafficTime
 			                 AND sm.week_day = :weekDay
 			                 AND sm.year = :year
 			                 AND sm.number_of_rides >= 5
-			             WHERE
-			                 planet_osm_line.last_analysed IS NOT NULL
-			                 AND planet_osm_line.highway IN :roadTypes
+			             WHERE pl.highway IN :roadTypes
 			                 AND sm.dangerous_color IS NOT NULL;
 			""", nativeQuery = true)
 	List<Map<String, Object>> findHighways(@Param("longitude") double longitude, @Param("latitude") double latitude,
 			@Param("distanceFilter") int distanceFilter, @Param("roadTypes") List<String> roadTypes,
 			@Param("tolerance") double tolerance, @Param("trafficTime") String trafficTime,
 			@Param("weekDay") String weekDay, @Param("year") int year);
-
-	@Query(value = """
-            SELECT *
-            FROM planet_osm_line p
-            WHERE EXISTS(
-                SELECT 1
-                FROM ride_entity__planet_osm_line r
-                WHERE r.planet_osm_lines_osm_id = p.osm_id
-            )
-        """, nativeQuery = true)
-	// AND (p.rideEntities IS NOT EMPTY OR p.rideIncident IS NOT EMPTY)
-    // As incidents happens on rides, checking for rides is sufficient
-	List<PlanetOsmLine> findAllStreets(Pageable pageable);
+    
 
 	@Query("""
 			    SELECT new com.simra.konsumgandalf.osmPlanet.classes.dtos.FindNumberOfRidesWithinStreetSegmentInTimePeriodDTO(
@@ -101,9 +78,13 @@ public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 	List<String> findAllHighwayIdStartingWith(String idPrefix);
 
 	@Query(value = """
-			    SELECT p.osm_id as osm_id, ST_AsGeoJSON(ST_TRANSFORM(ST_Simplify(p.way, 5), 4326)) AS way, p.highway
-			    FROM planet_osm_line p
-			    WHERE p.last_modified IS NOT NULL AND p.last_analysed IS NOT NULL
+SELECT p.osm_id as osm_id, ST_AsGeoJSON(ST_TRANSFORM(ST_Simplify(p.way, 5), 4326)) AS way, p.highway
+FROM planet_osm_line p
+WHERE EXISTS (
+   SELECT 1
+   FROM safety_metrics__planet_osm_line s
+   WHERE p.osm_id = s.osm_id
+)
 			""", nativeQuery = true)
 	List<Map<String, Object>> getGridRaw();
 

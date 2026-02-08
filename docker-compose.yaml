@@ -1,26 +1,26 @@
-version: '3.8'
-
 name: simra
 
 services:
     spring:
         container_name: spring-backend
         image: codinggandalf/simra-backend:latest
-        platform: linux/arm64
+        # platform: linux/arm64
         env_file:
             - .env
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
         ports:
-            - 8081:8080
+            - 8080:8080
         depends_on:
-            postgis:
-                condition: service_healthy
+        #    postgis:
+        #        condition: service_healthy
             valhalla:
                 condition: service_healthy
             redis:
                 condition: service_healthy
         volumes:
-            - /home/konsumpi/Downloads/Simra/dataset-master:/rides
-            - /home/konsumpi/Downloads/Simra/Profiles:/profiles
+            - /home/ben/Documents/simra/dataset/simra-test/Rides:/rides
+            - /home/ben/Documents/simra/dataset/simra-test/Profiles:/profiles
             - bloomfilter:/bloomfilter
         healthcheck:
             test: ["CMD-SHELL", "curl -f http://localhost:8080/api/actuator/health || true"]
@@ -43,9 +43,10 @@ services:
             - ./valhalla/custom_files/:/custom_files
             - ./valhalla/gtfs_feeds:/gtfs_feeds
         environment:
-            - tile_urls=https://download.geofabrik.de/europe/dach-latest.osm.pbf
+            - tile_urls=https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf 
+               
             - server_threads=8
-            - use_tiles_ignore_pbf=True
+            - use_tiles_ignore_pbf=False
             - tileset_name=valhalla_tiles
             - buildTar=True
             - update_existing_config=True
@@ -76,8 +77,10 @@ services:
     init-postgis:
         container_name: init-postgis
         image: codinggandalf/postgis:arm64-init-postgis
-        platform: linux/arm64
+        # platform: linux/arm64
         restart: "no"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
         command:
           [
               "sh",
@@ -85,9 +88,9 @@ services:
               "export PGPASSWORD=${POSTGRES_PASSWORD} &&
          osm2pgsql -d ${POSTGRES_DB} -U ${POSTGRES_USER} -H ${POSTGRES_HOST} -C 4096 --number-processes=4 --slim --hstore /tmp/${OSM_MAP_SOURCE}"
           ]
-        depends_on:
-            postgis:
-                condition: service_healthy
+        #depends_on:
+        #    postgis:
+        #        condition: service_healthy
         volumes:
             - ./postgis/data/${OSM_MAP_SOURCE}:/tmp/${OSM_MAP_SOURCE}
         env_file:
@@ -95,27 +98,28 @@ services:
         networks:
             - postgis-service
 
-    postgis:
-        container_name: postgis
-        image: codinggandalf/postgis:arm64
-        platform: linux/arm64
-        shm_size: 4gb
-        env_file:
-            - .env
-        ports:
-            - 25432:5432
-        volumes:
-            - postgis-data:/var/lib/postgresql/data
+    #postgis:
+    #    container_name: postgis
+    #    image: codinggandalf/postgis:arm64 # oficial or shelll script, datenbank muss osm postgis initialisieren
+        # platform: linux/arm64
+    #    shm_size: 4gb
+    #    env_file:
+    #        - .env
+    #    ports:
+    #        - 25432:5432
+    #    volumes:
+    #        - postgis-data:/var/lib/postgresql/data
+    #       - ./postgis/10_enable_postgis.sql:/docker-entrypoint-initdb.d/10_enable_postgis.sql
             # If you want to run initialization scripts, uncomment the following line and add your scripts to the postgis folder
             # - ./postgis/10_postgis.sh:/docker-entrypoint-initdb.d/10_postgis.sh
-        healthcheck:
-            test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "localhost"]
-            interval: 10s
-            retries: 5
-            start_period: 10s
-            timeout: 5s
-        networks:
-            - postgis-service
+    #    healthcheck:
+    #        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "localhost"]
+    #        interval: 10s
+    #        retries: 5
+    #        start_period: 10s
+    #        timeout: 5s
+    #    networks:
+    #        - postgis-service
 
 volumes:
     postgis-data:

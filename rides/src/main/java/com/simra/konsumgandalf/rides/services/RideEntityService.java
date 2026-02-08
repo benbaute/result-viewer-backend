@@ -3,18 +3,18 @@ package com.simra.konsumgandalf.rides.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simra.konsumgandalf.common.logging.LogExecutionTime;
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.classes.RideLocation;
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import com.simra.konsumgandalf.common.models.entities.RideEntity;
 import com.simra.konsumgandalf.common.models.entities.RideIncident;
 import com.simra.konsumgandalf.common.models.enums.IncidentType;
-import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.common.models.maps.IxFunctionToParticipantTypeMap;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
 import com.simra.konsumgandalf.common.utils.services.FileReaderService;
+import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.rides.repositories.RideEntityRepository;
 import com.simra.konsumgandalf.valhalla.services.ValhallaTraceAttributesService;
 import jakarta.transaction.Transactional;
@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -29,28 +30,20 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.simra.konsumgandalf.common.constants.AppDates.FALLBACK_DATE;
-import static com.simra.konsumgandalf.common.constants.AppDates.FALLBACK_DATE_MILLIS;
-import static com.simra.konsumgandalf.common.constants.AppDates.START_OF_RECORDING;
+import static com.simra.konsumgandalf.common.constants.AppDates.*;
 
 @Service
 @Transactional
 public class RideEntityService {
 
-	private static Path dataPath;
+    @Autowired
+    @Lazy // Crucial! Prevents "Circular Dependency" errors
+    private RideEntityService self;
+
+    private static Path dataPath;
 
 	private static final ObjectMapper _objectMapper = new ObjectMapper();
 
@@ -71,71 +64,62 @@ public class RideEntityService {
 	@Autowired
 	private FileReaderService fileReaderService;
 
-	@Autowired
-	private BloomFilterRideExistenceChecker bloomFilterRideExistenceChecker;
+    @Autowired
+    private RideService rideService;
 
-	@Autowired
-	private DatabaseExistenceChecker databaseExistenceChecker;
+    @Autowired
+    private GeoService geoService;
 
-	@Autowired
-	private PlanetOsmLineService planetOsmLineService;
+    static final double MIN_DISTANCE_METERS = 3.0;
+    static final double MAX_SPEED_METERS_PER_SECOND = 30.0; // Above 100 km/h for a bike
 
-	RideEntityService(@Value("${SIMRA_RIDE_FILE_PATH:./}") String filePath) {
+    RideEntityService(@Value("${SIMRA_RIDE_FILE_PATH:./}") String filePath) {
 		dataPath = Paths.get(filePath);
 	}
 
-	public void loadAllPreviousRidesBloomFilter() {
-		loadAllPreviousRides(bloomFilterRideExistenceChecker::doesNotExist);
+    @LogExecutionTime
+	public int loadAllPreviousRides() {
+		int counter = 0;
+
+        for (String path : getNewRidePaths()) {
+            try {
+                generateNewRideEntity(path);
+                _logger.info("[{}] Processed file: {}", ++counter, path);
+            }
+            catch (Exception e) {
+                _logger.error("Error processing file: {}", path, e);
+            }
+        }
+
+		_logger.info("Loaded {} new rides", counter);
+        return counter;
 	}
 
-	public void loadAllPreviousRidesDatabase() {
-		loadAllPreviousRides(databaseExistenceChecker::doesNotExist);
-	}
+    private List<String> getNewRidePaths() {
+        try {
+            List<String> allPaths = Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)
+                    .filter(Files::isRegularFile)
+                    .filter(FileReaderService::isEntityFile)
+                    .map(Path::toString)
+                    .toList();
 
-	@LogExecutionTime
-	private void loadAllPreviousRides(Predicate<String> rideExistenceChecker) {
-		List<CompletableFuture<Void>> futures = new ArrayList<>();
-		AtomicInteger counter = new AtomicInteger(0);
-
-		try {
-			Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)
-				.filter(Files::isRegularFile)
-				.filter(FileReaderService::isEntityFile)
-				.map(Path::toString)
-				.filter(rideExistenceChecker)
-				.forEach(path -> {
-					CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-						try {
-							RideEntity r = generateNewRideEntity(path);
-							if (r == null) {
-								return;
-							}
-							int count = counter.incrementAndGet();
-							bloomFilterRideExistenceChecker.add(path);
-                            _logger.info("[{}] Processed file: {}", count, path);
-						}
-						catch (Exception e) {
-							_logger.error("Error processing file: {}", path, e);
-						}
-					});
-					futures.add(future);
-				});
-		}
-		catch (IOException e) {
-			_logger.error("Error reading files from path: " + dataPath, e);
-		}
-
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-		_logger.info("Loaded {} new rides", counter.get());
-	}
+            Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(allPaths));
+            return allPaths.stream().filter(path -> !existingPaths.contains(path)).toList();
+        }
+        catch (IOException e) {
+            _logger.error("Error reading files from path: {}", dataPath, e);
+            return Collections.emptyList();
+        }
+    }
 
 	/**
 	 * Add the CSV data to the ride entity.
-	 * @param rideEntity - The ride entity to enrich
+	 * @param path - The path to the ride entity to enrich
 	 * @return - The enriched ride entity
 	 */
-	protected RideEntity enrichRideEntityWithCsv(RideEntity rideEntity) {
-		String content = fileReaderService.readFileFromPath(rideEntity.getPath());
+    @LogExecutionTimeSubTask
+	public RideEntity enrichRideEntityWithCsv(String path) {
+		String content = fileReaderService.readFileFromPath(path);
 
 		String[] filteredParts = Arrays.stream(content.split("=+"))
 			.map(part -> Arrays.stream(part.split("\n"))
@@ -159,7 +143,16 @@ public class RideEntityService {
 			return null;
 		}
 
+        RideEntity rideEntity = new RideEntity(path);
 		rideEntity.setRideLocations(rideLocationList);
+        rideEntity.setCleanLocations(getCleanCoordinates(rideLocationList));
+        if (rideEntity.getCleanLocations().size() < 5) {
+            _logger.error("File does not contain enough clean ride locations, clean size: {}, unfiltered size: {}",
+                    rideEntity.getCleanLocations().size(), rideLocationList.size());
+            return null;
+        }
+
+        rideEntity.setCoordinates(generateCoordinateString(rideLocationList));
 
 		long[] rideTimestamps = rideLocationList.stream()
 			.map(RideLocation::getTimeStamp)
@@ -207,16 +200,76 @@ public class RideEntityService {
 		return rideEntity;
 	}
 
+    private ArrayList<MatchInformation> removeDuplicateTimeStamps(ArrayList<MatchInformation> coordinates) {
+        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+        if (!coordinates.isEmpty()) {
+            nonDuplicateCoordinates.add(coordinates.getFirst());
+            for (MatchInformation current : coordinates) {
+                long previousTime = nonDuplicateCoordinates.getLast().getTimestamp();
+                long currentTime = current.getTimestamp();
+                if (currentTime < previousTime) {
+                    throw new RuntimeException("Timestamps not in order.");
+                }
+                if (currentTime != previousTime) {
+                    nonDuplicateCoordinates.add(current);
+                }
+            }
+        }
+        return nonDuplicateCoordinates;
+    }
+
+    private ArrayList<MatchInformation> removeSpatialDuplicates(ArrayList<MatchInformation> coordinates) {
+        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+        if (!coordinates.isEmpty()) {
+            nonDuplicateCoordinates.add(coordinates.getFirst());
+            for (MatchInformation current : coordinates) {
+                MatchInformation previous = nonDuplicateCoordinates.getLast();
+                if (geoService.distance(previous, current) > MIN_DISTANCE_METERS) {
+                    nonDuplicateCoordinates.add(current);
+                }
+            }
+        }
+        return nonDuplicateCoordinates;
+    }
+
+    private ArrayList<MatchInformation> removeTeleportation(ArrayList<MatchInformation> coordinates) {
+        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+        if (!coordinates.isEmpty()) {
+            nonDuplicateCoordinates.add(coordinates.getFirst());
+            for (int i = 1; i < coordinates.size(); i++) {
+                MatchInformation previous = nonDuplicateCoordinates.getLast();
+                MatchInformation current = coordinates.get(i);
+
+                double dt = current.getTimestamp() - previous.getTimestamp();
+                double speed = geoService.distance(previous, current) / dt; // m/s
+
+                if (speed < MAX_SPEED_METERS_PER_SECOND) {
+                    nonDuplicateCoordinates.add(current);
+                }
+            }
+        }
+        return nonDuplicateCoordinates;
+    }
+
+    private ArrayList<MatchInformation> getCleanCoordinates(List<RideLocation> rideLocationList) {
+        ArrayList<MatchInformation> coordinates = new ArrayList<>(rideLocationList
+                .stream()
+                .map(location -> new MatchInformation(location.getLng(), location.getLat(), location.getTimeStamp() / 1000))
+                .toList());
+
+        return removeTeleportation(removeSpatialDuplicates(removeDuplicateTimeStamps(coordinates)));
+    }
+
 	/**
 	 * Generate a new ride entity from a CSV file.
 	 * @param path - The path to the CSV file
 	 * @return - The generated ride entity
 	 */
 	public RideEntity generateNewRideEntity(String path) {
-		RideEntity rideEntity = new RideEntity(path);
+		RideEntity rideEntity;
 
 		try {
-			rideEntity = enrichRideEntityWithCsv(rideEntity);
+			rideEntity = self.enrichRideEntityWithCsv(path);
 		}
 		catch (IllegalArgumentException e) {
 			_logger.error("Error enriching ride entity with CSV", e);
@@ -227,51 +280,55 @@ public class RideEntityService {
 			return null;
 		}
 
-		String cleanedRideLocationString = generateCoordinateString(rideEntity.getRideLocations());
-		rideEntity.setCoordinates(cleanedRideLocationString);
-
-		rideEntity = linkToPlanetOsmLine(rideEntity);
+		self.linkToPlanetOsmLine(rideEntity);
+        rideService.processRideEntity(rideEntity);
 
 		return rideEntityRepository.save(rideEntity);
 	}
 
-	/**
-	 * Links a ride entity and its incidents to the closest street segments in the planet
-	 * OSM line repository.
-	 * @param rideEntity - The csv enriched ride entity
-	 * @return - The cleaned ride location
-	 */
-	protected RideEntity linkToPlanetOsmLine(RideEntity rideEntity) {
-		List<MatchInformation> coordinates = rideEntity.getRideLocations()
-			.stream()
-			.map(location -> new MatchInformation(location.getLng(), location.getLat(), location.getTimeStamp() / 1000))
-			.toList();
+    /**
+     * Links a ride entity and its incidents to the closest street segments in the planet
+     * OSM line repository.
+     * @param rideEntity - The csv enriched ride entity
+     */
+    @LogExecutionTimeSubTask
+	public void linkToPlanetOsmLine(RideEntity rideEntity) {
+		List<MatchInformation> coordinates = rideEntity.getCleanLocations();
 
 		List<Long> streetSegmentIdsOfRoute = valhallaTraceAttributesService
 			.calculateStreetSegmentIdsOfRoute(coordinates);
 		if (streetSegmentIdsOfRoute.isEmpty()) {
 			_logger.error("Could not find any street segments for ride entity with path {}", rideEntity.getPath());
-			return rideEntity;
+			return;
 		}
 
-		List<PlanetOsmLine> references = planetOsmLineRepository.findExistingIds(streetSegmentIdsOfRoute)
-			.stream()
-			.map(id -> {
-				PlanetOsmLine ref = new PlanetOsmLine();
-				ref.setId(id);
-				return ref;
-			})
-			.toList();
+		rideEntity.setPlanetOsmLines(planetOsmLineRepository.findByIds(streetSegmentIdsOfRoute));
 
-		rideEntity.setPlanetOsmLines(references);
+        List<RideIncident> incidents = rideEntity.getRideIncidents();
+        int numberOfIncidents = incidents.size();
+        if (numberOfIncidents > 0) {
+            Long[] incidentIds = new Long[numberOfIncidents];
+            Double[] lngs = new Double[numberOfIncidents];
+            Double[] lats = new Double[numberOfIncidents];
 
-		for (RideIncident incident : rideEntity.getRideIncidents()) {
-			PlanetOsmLine planetOsmLine = planetOsmLineRepository.findClosestStreetSegments(streetSegmentIdsOfRoute,
-					incident.getLng(), incident.getLat());
-			incident.setPlanetOsmLine(planetOsmLine);
-		}
+            for (int i = 0; i < numberOfIncidents; i++) {
+                RideIncident inc = incidents.get(i);
+                incidentIds[i] = (long) i;
+                lngs[i] = inc.getLng();
+                lats[i] = inc.getLat();
+            }
 
-		return rideEntity;
+            List<Long[]> matches = planetOsmLineRepository.findClosestStreetSegments(
+                    streetSegmentIdsOfRoute, incidentIds, lngs, lats);
+
+            for  (Long[] match : matches) {
+                int incidentId = Math.toIntExact(match[0]);
+                Long osmId = match[1];
+                PlanetOsmLine ref = new PlanetOsmLine();
+                ref.setId(osmId);
+                incidents.get(incidentId).setPlanetOsmLine(ref);
+            }
+        }
 	}
 
 	/**
@@ -280,7 +337,6 @@ public class RideEntityService {
 	 * @return - The entity that encapsulates the geometry
 	 * @throws JsonProcessingException
 	 */
-	// @LogExecutionTime
 	protected String generateCoordinateString(List<RideLocation> rideLocationList) {
 		List<Map<String, Double>> coordinatesList = rideLocationList.stream().map(rideLocation -> {
 			Map<String, Double> coordMap = new HashMap<>();

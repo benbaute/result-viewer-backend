@@ -4,10 +4,12 @@ import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,8 +41,6 @@ public class MatchedPoint implements FeatureMappable {
 
     private int pointInEdgeId;
 
-    private Double distanceAlongEdge;
-
     private Double distanceFromTracePoint;
 
     private int stops;
@@ -49,11 +49,30 @@ public class MatchedPoint implements FeatureMappable {
     private Date timestamp;
 
 	// --- Data, not saved ---
+    @Transient
+    private Long osmId;
+
 	@Transient
 	private String type;
 
 	@Transient
-	private int edgeIndex;
+	private Integer edgeIndex;
+
+    @Transient
+    Coordinate coordinate;
+
+    @Transient
+    private List<TrafficSignalCluster> trafficSignalClusters;
+
+    @Transient
+    private TrafficSignalCluster inIntersectionCluster;
+
+    @Transient
+    private PlanetOsmLine prevLine;
+
+    @Transient
+    private PlanetOsmLine nextLine;
+
 
 	// --- Constructor ---
 	public MatchedPoint() {
@@ -72,7 +91,6 @@ public class MatchedPoint implements FeatureMappable {
         properties.put("way_id", this.getLine() != null ? this.getLine().getId() : "null");
         properties.put("inIntersection", this.getInIntersection());
         properties.put("ride_id", this.ride.getId());
-        properties.put("distance_along_edge", this.getDistanceAlongEdge());
         properties.put("distance_from_trace_point", this.getDistanceFromTracePoint());
         properties.put("stops", this.getStops());
         return properties;

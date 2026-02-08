@@ -1,8 +1,9 @@
 package com.simra.konsumgandalf.common.models.interfaces;
 
+import org.locationtech.jts.geom.Geometry;
+
 import java.util.HashMap;
 import java.util.Map;
-import org.locationtech.jts.geom.Geometry;
 
 public interface FeatureMappable {
     Geometry getGeom();

@@ -1,14 +1,13 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 
-import java.util.List;
-
+import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
-import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
+import java.util.List;
 
 @Repository
 public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEdge, Long> {

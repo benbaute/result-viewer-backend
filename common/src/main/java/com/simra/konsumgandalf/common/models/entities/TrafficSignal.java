@@ -1,14 +1,15 @@
 package com.simra.konsumgandalf.common.models.entities;
 
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.Polygon;
 
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -27,10 +28,6 @@ public class TrafficSignal implements FeatureMappable {
 
 	public TrafficSignal() {
 	}
-    public TrafficSignal(long id, Point point) {
-        this.id = id;
-        this.geom = point;
-    }
 
     @Override
     public Map<String, Object> getProperties() {

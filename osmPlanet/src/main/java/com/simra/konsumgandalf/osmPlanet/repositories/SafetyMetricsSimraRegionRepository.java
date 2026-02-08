@@ -6,8 +6,10 @@ import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.RideEntityMetricsDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -52,4 +54,10 @@ public interface SafetyMetricsSimraRegionRepository
 			""")
 	List<RideEntityMetricsDTO> findNumberOfRidesAndLengthAll();
 
+    @Modifying
+    @Transactional
+    @Query(value = """
+    REFRESH MATERIALIZED VIEW safety_metrics__simra_region;
+""", nativeQuery = true)
+    void updateSafetyMetricsSimraRegion();
 }

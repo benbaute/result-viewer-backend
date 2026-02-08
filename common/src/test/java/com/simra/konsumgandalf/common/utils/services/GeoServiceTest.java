@@ -1,7 +1,5 @@
 package com.simra.konsumgandalf.common.utils.services;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +7,8 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(MockitoExtension.class)
 public class GeoServiceTest {
@@ -55,5 +55,15 @@ public class GeoServiceTest {
         *
 		 */
 	}
+
+    @Test
+    public void testAverage() {
+        List<Double> values = List.of(5.0, 5.0, 5.0, 5.0, 5.0, 10.0);
+        //Double average = geoService.calculateAverage(values);
+        //System.out.println(average);
+
+        //Double std = geoService.calculateStandardDeviation(values);
+        //System.out.println(std);
+    }
 
 }

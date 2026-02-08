@@ -65,7 +65,6 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":rides"))
     implementation(project(":osmPlanet"))
-    implementation(project(":profiles"))
 
     implementation("com.opencsv:opencsv:5.9")
     implementation("org.springframework.boot:spring-boot-starter-actuator")

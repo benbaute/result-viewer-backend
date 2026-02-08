@@ -2,11 +2,7 @@ package com.simra.konsumgandalf.osmPlanet.classes.dtos;
 
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
-import com.simra.konsumgandalf.common.models.maps.TrafficTimesMapper;
 import com.simra.konsumgandalf.osmPlanet.classes.keys.TrafficTimeWeekDayKey;
-import jakarta.persistence.ColumnResult;
-import jakarta.persistence.ConstructorResult;
-import jakarta.persistence.SqlResultSetMapping;
 
 public class FindNumberOfRidesWithinStreetSegmentInTimePeriodDTO extends TrafficTimeWeekDayKey {
 

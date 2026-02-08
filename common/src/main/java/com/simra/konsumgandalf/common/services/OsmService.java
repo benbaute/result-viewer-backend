@@ -1,28 +1,29 @@
 package com.simra.konsumgandalf.common.services;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-
+import com.simra.konsumgandalf.common.logging.LogExecutionTime;
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
+import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
+import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
+import com.simra.konsumgandalf.common.repositories.TrafficSignalClusterRepository;
+import com.simra.konsumgandalf.common.repositories.TrafficSignalRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
-import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
-import com.simra.konsumgandalf.common.repositories.TrafficSignalClusterRepository;
-import com.simra.konsumgandalf.common.repositories.TrafficSignalRepository;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 
 @Service
 public class OsmService {
+    private static final Logger _logger = LoggerFactory.getLogger(OsmService.class);
+
     @Autowired
     private TrafficSignalRepository trafficSignalRepository;
 
@@ -120,6 +121,26 @@ public class OsmService {
         trafficSignalClusterRepository.setStreetNames();
     }
 
+    @Transactional
+    public void saveTrafficSignalClusters() {
+        setSignalIdsOnCluster();
+        try {
+            mergeClusters();
+        } catch (IOException e) {
+            _logger.error("Failed to merge clusters.", e);
+        }
+        createClusterPolygons();
+        populateClusterLineRelations();
+        setStreetNames();
+    }
+
+    @LogExecutionTime
+    @Transactional
+    public void loadTrafficSignalData() {
+        saveTrafficSignals();
+        saveTrafficSignalClusters();
+    }
+
     public List<TrafficSignal> getAllTrafficSignals() {
         return trafficSignalRepository.findAll();
     }
@@ -136,6 +157,11 @@ public class OsmService {
         return trafficSignalClusterRepository.findByOsmLineId(osmLineId);
     }
 
+    @LogExecutionTimeSubTask
+    public List<Object[]> findTrafficSignalClustersByOsmLineIds(List<Long> osmLineIds) {
+        return trafficSignalClusterRepository.findByOsmLineIds(osmLineIds);
+    }
+
     public List<TrafficSignalCluster> getAllTrafficSignalClusters() {
         return trafficSignalClusterRepository.findAll();
     }
@@ -143,9 +169,5 @@ public class OsmService {
 
     public boolean emptyTrafficSignals() {
         return trafficSignalRepository.count() == 0;
-    }
-
-    public boolean emptyTrafficSignalClusters() {
-        return trafficSignalClusterRepository.count() == 0;
     }
 }

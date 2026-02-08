@@ -1,30 +1,17 @@
 package com.simra.konsumgandalf.common.utils.services;
 
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
-import com.simra.konsumgandalf.common.models.classes.MatchInformationDate;
-
-import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import org.locationtech.jts.geom.*;
-import org.locationtech.proj4j.*;
-
-
 import org.geotools.referencing.GeodeticCalculator;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
 public class GeoService {
-    private static final CRSFactory crsFactory = new CRSFactory();
-    private static final CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
-    private static final CoordinateReferenceSystem sourceCRS = crsFactory.createFromName("EPSG:3857");
-    private static final CoordinateReferenceSystem targetCRS = crsFactory.createFromName("EPSG:4326");
-    private static final CoordinateTransform transform = ctFactory.createTransform(sourceCRS, targetCRS);
-
     public static <T extends FeatureMappable>
     Map<String, Object> getFeatureCollection(List<T> elements) {
         List<Map<String, Object>> features = elements.stream()
@@ -38,33 +25,6 @@ public class GeoService {
         return featureCollection;
     }
 
-    public static Geometry transformLine(Geometry geom) {
-        GeometryFactory geometryFactory = geom.getFactory();
-
-        Coordinate[] srcCoords = geom.getCoordinates();
-        Coordinate[] destCoords = new Coordinate[srcCoords.length];
-
-        ProjCoordinate src = new ProjCoordinate();
-        ProjCoordinate dest = new ProjCoordinate();
-
-        for (int i = 0; i < srcCoords.length; i++) {
-            src.x = srcCoords[i].x;
-            src.y = srcCoords[i].y;
-            transform.transform(src, dest);
-            destCoords[i] = new Coordinate(dest.x, dest.y);
-        }
-
-        return geometryFactory.createLineString(destCoords);
-    }
-
-    public List<Coordinate> getLineCoordinates(PlanetOsmLine line) {
-        Geometry transformGeometry = transformLine(line.getWay());
-        List<Coordinate> coordinates = List.of();
-        if (transformGeometry instanceof LineString lineString) {
-            coordinates = Arrays.asList(lineString.getCoordinates());
-        }
-        return coordinates;
-    }
 
 	public double haversine(double lat1, double lon1, double lat2, double lon2) {
 		final double R = 6371000;
@@ -84,6 +44,10 @@ public class GeoService {
         return distance(first.getX(), first.getY(), second.getX(), second.getY());
     }
 
+    public double distance(MatchInformation first, MatchInformation second) {
+        return distance(first.getLat(), first.getLng(), second.getLat(), second.getLng());
+    }
+
     public double getLength(List<Coordinate> coordinates) {
         double length = 0;
         for (int i = 1; i < coordinates.size(); i++) {
@@ -96,6 +60,14 @@ public class GeoService {
         return polygon.contains(point);
     }
 
+    /**
+     * Calculates the distance in meters between two points in EPSG:4326
+     * @param lat1 - Latitude of first point
+     * @param lon1 - Longitude of first point
+     * @param lat2 - Latitude of second point
+     * @param lon2 - Longitude of second point
+     * @return - distance in meters
+     */
 	public double orthodromicDistance(double lat1, double lon1, double lat2, double lon2) {
         GeodeticCalculator geodeticCalculator = new GeodeticCalculator();
 		geodeticCalculator.setStartingGeographicPoint(lon1, lat1);
@@ -103,21 +75,19 @@ public class GeoService {
 		return geodeticCalculator.getOrthodromicDistance();
 	}
 
-	public List<Double> calculateSpeed(List<MatchInformationDate> coordinates) {
+	public List<Double> calculateSpeed(List<MatchInformation> coordinates) {
 		List<Double> speeds = new ArrayList<>();
-		speeds.add(0.0);
-		for (int i = 1; i < coordinates.size(); i++) {
-			MatchInformationDate current = coordinates.get(i);
-			MatchInformationDate previous = coordinates.get(i - 1);
-			if (previous.getOriginalTimestamp().getTime() >= current.getOriginalTimestamp().getTime()) {
+		for (int i = 0; i < coordinates.size() - 1; i++) {
+			MatchInformation current = coordinates.get(i);
+			MatchInformation next = coordinates.get(i + 1);
+			if (next.getTimestamp() <= current.getTimestamp()) {
 				throw new RuntimeException("Timestamps not strictly monotonic increasing.");
 			}
-            long timeDifferenceLong = (current.getOriginalTimestamp().getTime() -
-                    previous.getOriginalTimestamp().getTime());
-            double timeDifference = (double) (timeDifferenceLong) / 1000; // In seconds
-			double distance = distance(current.getLat(), current.getLng(), previous.getLat(), previous.getLng());
-			speeds.add(distance / timeDifference);
+            double timeDiff = (double) (next.getTimestamp() - current.getTimestamp());
+			double distance = distance(next.getLat(), next.getLng(), current.getLat(), current.getLng());
+			speeds.add(distance / timeDiff);
 		}
+        speeds.add(0.0);
 		return speeds;
 	}
 

@@ -106,6 +106,14 @@ WHERE l.osm_id = :osmLineId
     List<TrafficSignalCluster> findByOsmLineId(Long osmLineId);
 
     @Query(value = """
+SELECT l.id, c
+FROM TrafficSignalCluster c
+JOIN c.osmLines l
+WHERE l.id IN :osmLineIds
+""")
+    List<Object[]> findByOsmLineIds(List<Long> osmLineIds);
+
+    @Query(value = """
 SELECT c.*
 FROM traffic_signal_cluster c
 WHERE :trafficSignalId = ANY(c.original_signal_ids)

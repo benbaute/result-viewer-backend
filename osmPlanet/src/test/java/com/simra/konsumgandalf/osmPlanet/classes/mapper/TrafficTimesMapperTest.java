@@ -1,10 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.classes.mapper;
 
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.simra.konsumgandalf.common.models.maps.TrafficTimesMapper;
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +8,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TrafficTimesMapperTest {
 

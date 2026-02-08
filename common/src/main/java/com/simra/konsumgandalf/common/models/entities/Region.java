@@ -1,28 +1,16 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.ColumnResult;
-import jakarta.persistence.ConstructorResult;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.NamedNativeQuery;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.SqlResultSetMapping;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Represents an administrative region like a state or a city.
@@ -82,45 +70,33 @@ WITH edges AS (
         edge_waiting_time / (edge_length_km + node_length_km) AS edge_waiting_s_per_km,
         (edge_median_waiting_time * node_count) / (edge_length_km + node_length_km) AS edge_median_waiting_s_per_km
     FROM edges e JOIN nodes n ON e.region_id = n.region_id
-    JOIN region ON region.name = e.region_id
+    JOIN region ON region.id = e.region_id
     WHERE (:region IS NULL OR :region = name)
     """,
         resultSetMapping = "RegionAggregateMapping"
 )
+@Getter
+@Setter
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Region implements FeatureMappable {
-
-	@Id
-	private String name;
+    @Id
+    private Long id;
 
 	@Column
-	private Long id;
+	private String name;
 
 	@Column
 	private int adminLevel;
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "region", fetch = FetchType.LAZY)
-	@JsonIgnore
-	private List<SafetyMetricsRegion> safetyMetricsRegions;
+    @Column(columnDefinition = "geometry(Polygon,4326)")
+    private Polygon way;
 
-	@ManyToMany(cascade = CascadeType.ALL)
-	@JsonIgnore
-	private List<SimraRegion> simraRegions;
-
-	@Column()
-	private Geometry way;
+    // For spatial joins with planet osm line
+    @Column(columnDefinition = "geometry(Polygon,3857)")
+    private Polygon geom3857;
 
 	public Region() {
-	}
-
-	public Region(String name) {
-		this.name = name;
-	}
-
-	public Region(String name, Long id, int adminLevel) {
-		this.name = name;
-		this.id = id;
-		this.adminLevel = adminLevel;
 	}
 
     @Override
@@ -135,68 +111,4 @@ public class Region implements FeatureMappable {
         properties.put("adminLevel", this.getAdminLevel());
         return properties;
     }
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public List<SafetyMetricsRegion> getSafetyMetricsRegions() {
-		return safetyMetricsRegions;
-	}
-
-	public void setSafetyMetricsRegions(List<SafetyMetricsRegion> safetyMetricsCities) {
-		this.safetyMetricsRegions = safetyMetricsCities;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
-		Region region = (Region) o;
-		return Objects.equals(name, region.name);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(name);
-	}
-
-	public List<SimraRegion> getSimraRegions() {
-		return simraRegions;
-	}
-
-	public void setSimraRegions(List<SimraRegion> simraRegions) {
-		this.simraRegions = this.simraRegions;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long osmId) {
-		this.id = osmId;
-	}
-
-	public Geometry getWay() {
-		return way;
-	}
-
-	public void setWay(Geometry way) {
-		this.way = way;
-	}
-
-	public int getAdminLevel() {
-		return adminLevel;
-	}
-
-	public void setAdminLevel(int level) {
-		this.adminLevel = level;
-	}
-
 }

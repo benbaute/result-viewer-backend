@@ -1,9 +1,7 @@
 package com.simra.konsumgandalf.common.utils.services;
 
-import com.opencsv.bean.BeanVerifier;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CsvUtilService {
@@ -75,7 +74,7 @@ public class CsvUtilService {
 				return line + ",";
 			}
 			return line;
-		}).filter(line -> isValidCsvLine(line, expectedCommas)).reduce((l1, l2) -> l1 + "\n" + l2).orElse("");
+		}).filter(line -> isValidCsvLine(line, expectedCommas)).collect(Collectors.joining("\n"));
 	}
 
 	private long getExpectedCommasFromHeader(String csvContent) {

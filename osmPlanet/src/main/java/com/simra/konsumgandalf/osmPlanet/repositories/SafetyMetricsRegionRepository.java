@@ -4,12 +4,13 @@ import com.simra.konsumgandalf.common.models.entities.SafetyMetricsRegion;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.RideEntityMetricsDTO;
-import com.simra.konsumgandalf.osmPlanet.classes.dtos.SafetyMetricDTO;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.SafetyMetricRegionDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -47,4 +48,10 @@ public interface SafetyMetricsRegionRepository
 			""")
 	List<SafetyMetricRegionDTO> getFilteredSafetyMetrics(TrafficTimes trafficTime, WeekDays weekDay, int year);
 
+    @Modifying
+    @Transactional
+    @Query(value = """
+    REFRESH MATERIALIZED VIEW safety_metrics__region;
+""", nativeQuery = true)
+    void updateSafetyMetricsRegion();
 }

@@ -1,7 +1,7 @@
 package com.simra.konsumgandalf.rides.controllers;
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
 import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
+import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
 import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/intersections")

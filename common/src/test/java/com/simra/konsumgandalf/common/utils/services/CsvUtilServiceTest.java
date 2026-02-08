@@ -1,7 +1,5 @@
 package com.simra.konsumgandalf.common.utils.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import com.opencsv.bean.CsvBindByName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -12,6 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.file.Path;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 public class CsvUtilServiceTest {

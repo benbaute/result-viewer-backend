@@ -1,31 +1,13 @@
 package com.simra.konsumgandalf.rides.services;
 
-import static com.simra.konsumgandalf.common.constants.AppDates.FALLBACK_DATE;
-import static com.simra.konsumgandalf.common.constants.AppDates.START_OF_RECORDING;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.anyList;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
+import com.simra.konsumgandalf.common.models.classes.RideLocation;
 import com.simra.konsumgandalf.common.models.entities.RideEntity;
 import com.simra.konsumgandalf.common.models.entities.RideIncident;
-import com.simra.konsumgandalf.common.models.classes.RideLocation;
 import com.simra.konsumgandalf.common.models.enums.IncidentType;
 import com.simra.konsumgandalf.common.models.enums.ParticipantType;
+import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.utils.services.CsvUtilService;
 import com.simra.konsumgandalf.common.utils.services.FileReaderService;
-import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.rides.repositories.RideEntityRepository;
 import com.simra.konsumgandalf.valhalla.services.ValhallaTraceAttributesService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +23,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
+import static com.simra.konsumgandalf.common.constants.AppDates.FALLBACK_DATE;
+import static com.simra.konsumgandalf.common.constants.AppDates.START_OF_RECORDING;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class RideEntityServiceTest {
@@ -109,11 +97,10 @@ public class RideEntityServiceTest {
 			when(csvUtilService.parseCsvToModel("lat,lng\n1.0,4.0", RideLocation.class)).thenReturn(List
 				.of(mockRideLocationValid, mockRideLocationValid2, mockRideLocationValid3, mockInvalidRideLocation));
 
-			mockRideEntity = new RideEntity("valid.csv");
-			mockRideEntity.setRideIncidents(Collections.singletonList(mockRideIncident));
-			mockRideEntity.setRideLocations(List.of(mockRideLocationValid));
 
-			RideEntity result = rideEntityService.enrichRideEntityWithCsv(mockRideEntity);
+			RideEntity result = rideEntityService.enrichRideEntityWithCsv("valid.csv");
+            result.setRideIncidents(Collections.singletonList(mockRideIncident));
+            result.setRideLocations(List.of(mockRideLocationValid));
 
 			InOrder inOrder = inOrder(csvUtilService);
 			inOrder.verify(csvUtilService).parseCsvToModel("lat,lng\n1.0,4.0", RideLocation.class);
@@ -189,10 +176,9 @@ public class RideEntityServiceTest {
 
 		@Test
 		public void testEnrichRideEntityWithCsv_InvalidFile() {
-			mockRideEntity = new RideEntity("invalid.csv");
 			when(fileReaderService.readFileFromPath("invalid.csv")).thenReturn("manual1,manual2\nvalue1,value2");
 
-			RideEntity result = rideEntityService.enrichRideEntityWithCsv(mockRideEntity);
+			RideEntity result = rideEntityService.enrichRideEntityWithCsv("invalid.csv");
 
 			assertNull(result);
 			verify(csvUtilService, times(0)).parseCsvToModel(any(String.class), eq(RideIncident.class));
@@ -212,7 +198,7 @@ public class RideEntityServiceTest {
 			List<RideLocation> mockRideLocationList = Collections.singletonList(mockRideLocation1);
 			mockRideEntity.setRideLocations(mockRideLocationList);
 
-			doReturn(mockRideEntity).when(rideEntityServiceSpy).enrichRideEntityWithCsv(any(RideEntity.class));
+			doReturn(mockRideEntity).when(rideEntityServiceSpy).enrichRideEntityWithCsv("valid.csv");
 			doReturn("[]").when(rideEntityServiceSpy).generateCoordinateString(mockRideLocationList);
 			doReturn(mockRideEntity).when(rideEntityServiceSpy).linkToPlanetOsmLine(any(RideEntity.class));
 
@@ -222,7 +208,7 @@ public class RideEntityServiceTest {
 
 			assertEquals(mockRideEntity, result);
 
-			verify(rideEntityServiceSpy, times(1)).enrichRideEntityWithCsv(any(RideEntity.class));
+			verify(rideEntityServiceSpy, times(1)).enrichRideEntityWithCsv("valid.csv");
 			verify(rideEntityServiceSpy, times(1)).generateCoordinateString(mockRideLocationList);
 			verify(rideEntityServiceSpy, times(1)).linkToPlanetOsmLine(any(RideEntity.class));
 			verify(rideEntityRepository, times(1)).save(mockRideEntity);
@@ -231,7 +217,7 @@ public class RideEntityServiceTest {
 		@Test
 		public void testGenerateNewRideEntity_InvalidCsvFile() {
 			RideEntity mockRideEntity = new RideEntity("invalid.csv");
-			doThrow(new IllegalArgumentException()).when(rideEntityServiceSpy).enrichRideEntityWithCsv(mockRideEntity);
+			doThrow(new IllegalArgumentException()).when(rideEntityServiceSpy).enrichRideEntityWithCsv("valid.csv");
 
 			assertThrows(RuntimeException.class, () -> {
 				rideEntityServiceSpy.generateNewRideEntity(mockRideEntity.getPath());
@@ -241,7 +227,7 @@ public class RideEntityServiceTest {
 		@Test
 		public void testGenerateNewRideEntity_JsonProcessingException() throws Exception {
 			RideEntity mockRideEntity = new RideEntity("valid.csv");
-			doReturn(mockRideEntity).when(rideEntityServiceSpy).enrichRideEntityWithCsv(any(RideEntity.class));
+			doReturn(mockRideEntity).when(rideEntityServiceSpy).enrichRideEntityWithCsv("valid.csv");
 			doThrow(new IllegalArgumentException()).when(rideEntityServiceSpy).generateCoordinateString(anyList());
 
 			assertThrows(RuntimeException.class, () -> {

@@ -1,12 +1,11 @@
 package com.simra.konsumgandalf.osmPlanet.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.simra.konsumgandalf.common.constants.CronExpressions;
+import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.osmPlanet.repositories.RegionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -31,15 +30,25 @@ public class RegionService {
 		return regionRepository.findBasicRegionByName(name);
 	}
 
+
 	public List<String> getAllRegions(String prefix) {
 		return regionRepository.findAllNames(prefix);
 	}
 
-	public void exportPolygonJson() throws IOException {
-		List<Map<String, Object>> json = regionRepository.getPolygonRaw();
-		ObjectMapper mapper = new ObjectMapper();
-		File target = new File(exportPath + "/region-map.json");
-		mapper.writeValue(target, json);
-	}
 
+    @LogExecutionTime
+    public void exportPolygonJson() throws IOException {
+        List<Map<String, Object>> json = regionRepository.getPolygonRaw();
+        ObjectMapper mapper = new ObjectMapper();
+        File target = new File(exportPath + "/region-map.json");
+        mapper.writeValue(target, json);
+    }
+
+    public void saveRegions() {
+        regionRepository.saveRegions();
+    }
+
+    public boolean emptyRegions() {
+        return regionRepository.count() == 0;
+    }
 }

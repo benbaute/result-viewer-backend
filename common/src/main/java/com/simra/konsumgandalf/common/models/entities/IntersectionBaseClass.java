@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
 
 import java.util.*;
 
@@ -38,8 +39,12 @@ public abstract class IntersectionBaseClass extends TimeBaseClass {
 
     private double length; // m
 
-    @Column(nullable = true)
+    @Column
     private Double waitingTime; // s
+
+    // For calculating region
+    @Transient
+    private Point startPoint;
 
 
 	public IntersectionBaseClass() {
@@ -77,5 +82,5 @@ public abstract class IntersectionBaseClass extends TimeBaseClass {
         return properties;
     }
 
-    public abstract void setRegions(Set<Region> regions);
+    public abstract Set<Region> getRegions();
 }

@@ -1,7 +1,6 @@
 package com.simra.konsumgandalf.common.models.classes;
 
 import com.opencsv.bean.CsvBindByName;
-import jakarta.persistence.Embeddable;
 
 public class RideLocation {
 

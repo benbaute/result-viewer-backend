@@ -1,6 +1,5 @@
 package com.simra.konsumgandalf.backend.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simra.konsumgandalf.common.models.serializer.GeometrySerializer;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;

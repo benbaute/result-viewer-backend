@@ -1,17 +1,15 @@
 package com.simra.konsumgandalf.valhalla.services;
 
 import com.google.common.collect.Lists;
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.valhalla.models.ValhallaEdge;
 import com.simra.konsumgandalf.valhalla.models.ValhallaTraceAttributesResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,63 +30,50 @@ public class ValhallaTraceAttributesService extends ValhallaService {
 
 	public ValhallaTraceAttributesService(@Value("${VALHALLA_BACKEND_URL}") String osmrBackendUrl,
 			@Value("${VALHALLA_TURN_PENALTY_FACTOR}") int turnPenaltyFactor) {
-		super(osmrBackendUrl + "/trace_attributes", 10000, 10 * 1024 * 1024);
+		super(osmrBackendUrl + "/trace_attributes", 1024, 10 * 1024 * 1024);
 		TURN_PENALTY_FACTOR = turnPenaltyFactor;
 	}
 
+    @LogExecutionTimeSubTask
 	public List<Long> calculateStreetSegmentIdsOfRoute(List<MatchInformation> coordinates) {
-		// ArrayList<MatchInformation> filteredTimestampList = new ArrayList<>();
-		//
-		// long lastTimestamp = -1;
-		//
-		// for (MatchInformation coordinate : coordinates) {
-		// // 3 seconds is the minimum time difference between two coordinates
-		// if (lastTimestamp == -1 || coordinate.getTimestamp() - lastTimestamp > 3) {
-		// lastTimestamp = coordinate.getTimestamp();
-		// filteredTimestampList.add(coordinate);
-		// }
-		// }
-
 		List<List<MatchInformation>> partitions = Lists.partition(coordinates, DEFAULT_PARTITION_SIZE);
-		return Flux.fromIterable(partitions)
-			.flatMap(this::fetchWithRetry)
-			.collectList()
-			.map(this::combineChunks)
-			.onErrorResume(ex -> {
-				logger.warn("Error during calculation of street segments: {}", ex.getMessage());
-				return Mono.just(new ArrayList<>());
-			})
-			.block();
+        List<Long> results = new ArrayList<>();
+
+        for (List<MatchInformation> chunk : partitions) {
+            results.addAll(fetchWithRetry(chunk));
+        }
+        return results;
 	}
 
-	public Mono<List<Long>> fetchWithRetry(List<MatchInformation> chunk) {
-		return fetchIdsFromChunk(chunk).onErrorResume(WebClientResponseException.class, ex -> {
-			if (isNotFoundStreetSegmentError(ex)) {
-				return retryWithSmallerPartitions(chunk);
-			}
-
-			logger.error("Error fetching steps for chunk: {} - HTTP Status: {}", chunk, ex.getStatusCode());
-			return Mono.just(new ArrayList<>());
-		});
+	public List<Long> fetchWithRetry(List<MatchInformation> chunk) {
+        List<Long> results = new ArrayList<>();
+        try {
+            if (chunk.size() >= 4) {
+                results.addAll(fetchIdsFromChunk(chunk));
+            }
+            return results;
+        } catch (WebClientResponseException ex) {
+            if (isInsufficientShapeError(ex)) {
+                logger.warn("Insufficient shape, chunk size: {}", chunk.size());
+                return results;
+            }
+            if (!isNotFoundStreetSegmentError(ex)) {
+                logger.error("Unexpected error: {} - HTTP Status: {}", ex.getResponseBodyAsString(), ex.getStatusCode());
+                return results;
+            }
+            if (chunk.size() >= 32) {
+                List<List<MatchInformation>> subPartitions = Lists.partition(chunk, chunk.size() / 2);
+                List<List<Long>> subResults = subPartitions.stream().map(this::fetchWithRetry).toList();
+                for (List<Long> subResult : subResults) {
+                    results.addAll(subResult);
+                }
+                return results;
+            }
+            return results;
+        }
 	}
 
-	private Mono<List<Long>> retryWithSmallerPartitions(List<MatchInformation> chunk) {
-		List<List<MatchInformation>> subPartitions = Lists.partition(chunk, chunk.size() / 2);
-		return Flux.fromIterable(subPartitions)
-			.filter(subPartition -> subPartition.size() > 4)
-			.flatMap(subPartition -> fetchIdsFromChunk(subPartition).onErrorResume(WebClientResponseException.class,
-					ex -> {
-						if (isNotFoundStreetSegmentError(ex)) {
-							return retryWithSmallerPartitions(subPartition);
-						}
-						return Mono.just(new ArrayList<>());
-					}))
-			.delayElements(Duration.ofMillis(200))
-			.collectList()
-			.map(this::combineChunks);
-	}
-
-	public Mono<List<Long>> fetchIdsFromChunk(List<MatchInformation> coordinates) {
+	public List<Long> fetchIdsFromChunk(List<MatchInformation> coordinates) {
 		Map<String, Object> payload = new HashMap<>(BASE_PAYLOAD);
 		payload.put("shape", coordinates);
 		payload.put("begin_time", coordinates.getFirst().getTimestamp());
@@ -102,24 +87,7 @@ public class ValhallaTraceAttributesService extends ValhallaService {
 			.flatMapMany(response -> Flux.fromIterable(response.getEdges()))
 			.map(ValhallaEdge::getId)
 			.distinct()
-			.collectList();
+			.collectList()
+            .block();
 	}
-
-	/**
-	 * The method combines the chunked id lists of the street segments of the route to
-	 * one.
-	 * @param chunkedResponses - The list of id lists of the street segments of the route
-	 * @return - The id of all unique street segments of the route
-	 */
-	List<Long> combineChunks(List<List<Long>> chunkedResponses) {
-		return chunkedResponses.stream().flatMap(List::stream).distinct().toList();
-	}
-
-	boolean isNotFoundStreetSegmentError(WebClientResponseException ex) {
-		return ex.getStatusCode() == HttpStatus.BAD_REQUEST && (ex.getResponseBodyAsString()
-			.contains(
-					"Map Match algorithm failed to find path: map_snap algorithm failed to snap the shape points to the correct shape.")
-				|| ex.getResponseBodyAsString().contains("No suitable edges near location"));
-	}
-
 }

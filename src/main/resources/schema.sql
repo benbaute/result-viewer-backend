@@ -75,21 +75,15 @@ END;
 ' LANGUAGE plpgsql IMMUTABLE;
 
 --- Set Indexes for the analyticsServices
-CREATE INDEX IF NOT EXISTS idx_rel_planet_osm_id ON ride_entity__planet_osm_line (planet_osm_lines_osm_id);
-CREATE INDEX IF NOT EXISTS idx_rel_ride_entity_id ON ride_entity__planet_osm_line (ride_entities_id);
-
 CREATE INDEX IF NOT EXISTS idx_region_way_gist ON region USING GIST (way);
-CREATE INDEX IF NOT EXISTS idx_simra_region_way_gist ON region USING GIST (way);
-CREATE INDEX IF NOT EXISTS idx_ride_entity_way_gist ON simra_region USING GIST (way);
+CREATE INDEX IF NOT EXISTS idx_simra_region_way_gist ON simra_region USING GIST (way);
+CREATE INDEX IF NOT EXISTS idx_ride_entity_way_gist ON ride_entity USING GIST (way);
 
 --- Set indexes for intersection
 CREATE INDEX IF NOT EXISTS traffic_signal_geom25833_idx ON traffic_signal USING GIST (geom25833);
 CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signal_cluster USING GIST (geom3857);
+CREATE INDEX IF NOT EXISTS region_geom_3857_idx ON region USING GIST (geom3857);
 
----Set Index for filtering streets
-CREATE INDEX IF NOT EXISTS idx_planetosmline_lower_name_prefix
-ON planet_osm_line (lower(name))
-WHERE last_modified IS NOT NULL AND last_analysed IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION find_names_with_prefix(_prefix TEXT)
 RETURNS TABLE(name VARCHAR)
@@ -101,9 +95,12 @@ BEGIN
   RETURN QUERY
     SELECT DISTINCT p.name
     FROM planet_osm_line p
-    WHERE p.last_modified IS NOT NULL
-      AND p.last_analysed IS NOT NULL
-      AND LOWER(p.name) LIKE LOWER(_prefix || ''%'')
+    WHERE LOWER(p.name) LIKE LOWER(_prefix || ''%'')
+        AND EXISTS (
+            SELECT 1
+            FROM safety_metrics__planet_osm_line s
+            WHERE s.osm_id = p.osm_id
+        )
     ORDER BY p.name
     LIMIT 10;
 END;
@@ -119,10 +116,313 @@ BEGIN
   RETURN QUERY
     SELECT DISTINCT text(p.osm_id)
     FROM planet_osm_line p
-    WHERE p.last_modified IS NOT NULL
-      AND p.last_analysed IS NOT NULL
-      AND text(p.osm_id) LIKE _prefix || ''%''
+    WHERE text(p.osm_id) LIKE _prefix || ''%''
+      AND EXISTS (
+            SELECT 1
+            FROM safety_metrics__planet_osm_line s
+            WHERE s.osm_id = p.osm_id
+        )
     ORDER BY text(p.osm_id)
     LIMIT 10;
 END;
 ';
+
+CREATE OR REPLACE FUNCTION calculate_dangerous_score(
+    number_of_rides BIGINT,
+    number_of_incidents BIGINT,
+    number_of_scary_incidents BIGINT
+)
+    RETURNS FLOAT
+    LANGUAGE SQL
+    IMMUTABLE
+AS '
+SELECT
+    (4.4 * number_of_scary_incidents + (number_of_incidents - number_of_scary_incidents))::float
+    / NULLIF(number_of_rides, 0);
+';
+
+CREATE OR REPLACE FUNCTION get_color_for_score(score FLOAT)
+    RETURNS TEXT
+    LANGUAGE SQL
+    IMMUTABLE
+AS '
+SELECT CASE
+    WHEN score >= 0.5  THEN ''#EF4444''  -- RED_500
+    WHEN score >= 0.25 THEN ''#F97316''  -- ORANGE_500
+    WHEN score >= 0.1  THEN ''#F59E0B''  -- AMBER_500
+    WHEN score >= 0.04 THEN ''#84CC16''  -- LIME_500
+    WHEN score >= 0.0  THEN ''#22C55E''  -- GREEN_500
+    ELSE ''#E5E5E5''                     -- NEUTRAL_200
+END;
+';
+
+
+
+
+
+
+--- MATERIALIZED VIEWs
+
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS safety_metrics__planet_osm_line AS
+WITH rides AS (
+    SELECT l.planet_osm_lines_osm_id AS osm_id, r.week_day, r.traffic_time, r.year, COUNT(r.id) AS number_of_rides
+    FROM ride_entity__planet_osm_line l
+         JOIN ride_entity r ON l.ride_entities_id = r.id
+    GROUP BY l.planet_osm_lines_osm_id, r.week_day, r.traffic_time, r.year
+),
+incidents AS (
+    SELECT planet_osm_line_osm_id AS osm_id, week_day, traffic_time, year,
+        SUM(CASE WHEN scary = true THEN 1 ELSE 0 END)  AS number_of_scary_incidents,
+        SUM(CASE WHEN incident_type = 'PULLING_IN_OUT' THEN 1 ELSE 0 END)  AS number_of_pull_in_outs,
+        SUM(CASE WHEN incident_type = 'CLOSE_PASS' THEN 1 ELSE 0 END)  AS number_of_close_passes,
+        SUM(CASE WHEN incident_type = 'NEAR_LEFT_RIGHT_HOOK' THEN 1 ELSE 0 END)  AS number_of_near_left_right_hooks,
+        SUM(CASE WHEN incident_type = 'HEAD_ON_APPROACH' THEN 1 ELSE 0 END)  AS number_of_head_on_approaches,
+        SUM(CASE WHEN incident_type = 'TAILGATING' THEN 1 ELSE 0 END)  AS number_of_tailgating,
+        SUM(CASE WHEN incident_type = 'NEAR_DOORING' THEN 1 ELSE 0 END)  AS number_of_near_doorings,
+        SUM(CASE WHEN incident_type = 'DODGING_OBSTACLE' THEN 1 ELSE 0 END)  AS number_of_obstacle_dodges,
+        COUNT(*) AS number_of_incidents
+    FROM ride_incident
+    GROUP BY planet_osm_line_osm_id, week_day, traffic_time, year
+),
+combined AS (
+    SELECT
+        r.osm_id,
+        r.week_day,
+        r.traffic_time,
+        r.year,
+        r.number_of_rides,
+        coalesce(i.number_of_incidents, 0)       AS number_of_incidents,
+        coalesce(i.number_of_scary_incidents, 0) AS number_of_scary_incidents,
+        coalesce(i.number_of_pull_in_outs, 0) AS number_of_pull_in_outs,
+        coalesce(i.number_of_close_passes, 0) AS number_of_close_passes,
+        coalesce(i.number_of_near_left_right_hooks, 0) AS number_of_near_left_right_hooks,
+        coalesce(i.number_of_head_on_approaches, 0) AS number_of_head_on_approaches,
+        coalesce(i.number_of_tailgating, 0) AS number_of_tailgating,
+        coalesce(i.number_of_near_doorings, 0) AS number_of_near_doorings,
+        coalesce(i.number_of_obstacle_dodges, 0) AS number_of_obstacle_dodges
+    FROM rides r
+    LEFT JOIN incidents i ON
+        r.osm_id = i.osm_id AND
+        r.week_day = i.week_day AND
+        r.traffic_time = i.traffic_time AND
+        r.year = i.year
+),
+aggregated AS (
+    SELECT
+        osm_id,
+
+        COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
+        COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
+        COALESCE(year, 2000)                AS year,         -- aggregation number for years
+
+        SUM(number_of_rides)::bigint AS number_of_rides,
+        SUM(number_of_incidents)::bigint AS number_of_incidents,
+        SUM(number_of_scary_incidents)::bigint AS number_of_scary_incidents,
+        SUM(number_of_pull_in_outs) AS number_of_pull_in_outs,
+        SUM(number_of_close_passes) AS number_of_close_passes,
+        SUM(number_of_near_left_right_hooks) AS number_of_near_left_right_hooks,
+        SUM(number_of_head_on_approaches) AS number_of_head_on_approaches,
+        SUM(number_of_tailgating) AS number_of_tailgating,
+        SUM(number_of_near_doorings) AS number_of_near_doorings,
+        SUM(number_of_obstacle_dodges) AS number_of_obstacle_dodges
+    FROM combined
+    GROUP BY GROUPING SETS (
+    (osm_id),
+    (osm_id, year),
+    (osm_id, traffic_time),
+    (osm_id, traffic_time, year),
+    (osm_id, week_day),
+    (osm_id, week_day, year),
+    (osm_id, week_day, traffic_time),
+    (osm_id, week_day, traffic_time, year)
+    )
+)
+SELECT
+    osm_id,
+    week_day,
+    traffic_time,
+    year,
+    number_of_rides,
+    number_of_incidents,
+    calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents) AS dangerous_score,
+    get_color_for_score(calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents)) AS dangerous_color,
+    number_of_scary_incidents,
+    number_of_pull_in_outs,
+    number_of_close_passes,
+    number_of_near_left_right_hooks,
+    number_of_head_on_approaches,
+    number_of_tailgating,
+    number_of_near_doorings,
+    number_of_obstacle_dodges
+FROM aggregated
+;
+
+CREATE UNIQUE INDEX IF NOT EXISTS safety_metrics__planet_osm_line_pk
+    ON safety_metrics__planet_osm_line (osm_id, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS safety_metrics__planet_osm_line_dangerous
+    ON safety_metrics__planet_osm_line (dangerous_score);
+CREATE INDEX IF NOT EXISTS safety_metrics__planet_osm_line_osm_id
+    ON safety_metrics__planet_osm_line (osm_id);
+
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS safety_metrics__region AS
+WITH base_number_of_rides_and_length AS (
+    SELECT region.id,
+           r.traffic_time,
+           r.week_day,
+           r.year as year,
+           COUNT(*) as totalRides,
+           SUM(ST_Length_M(ST_Intersection(r.way, region.way))) as totalDistance
+    FROM region
+             JOIN ride_entity r ON st_intersects(region.way, r.way)
+    GROUP BY region.id, r.traffic_time, r.week_day, r.year
+),
+     number_of_rides_and_length AS (
+         SELECT
+             id,
+             COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
+             COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
+             COALESCE(year, 2000)                AS year,         -- aggregation number for years
+             SUM(totalRides) AS number_of_rides,
+             SUM(totalDistance) AS total_distance
+         FROM base_number_of_rides_and_length
+         -- The grouping sets MUST be the same as in safety_metrics__planet_osm_line or else aggregation is lost
+         GROUP BY GROUPING SETS (
+             (id),
+             (id, year),
+             (id, traffic_time),
+             (id, traffic_time, year),
+             (id, week_day),
+             (id, week_day, year),
+             (id, week_day, traffic_time),
+             (id, week_day, traffic_time, year)
+         )
+     ),
+     incidents AS (
+         SELECT
+             r.id, s.traffic_time, s.week_day, s.year,
+             SUM(number_of_rides)::bigint AS number_of_rides,
+             SUM(number_of_incidents)::bigint AS number_of_incidents,
+             SUM(number_of_scary_incidents)::bigint AS number_of_scary_incidents,
+             SUM(number_of_pull_in_outs) AS number_of_pull_in_outs,
+             SUM(number_of_close_passes) AS number_of_close_passes,
+             SUM(number_of_near_left_right_hooks) AS number_of_near_left_right_hooks,
+             SUM(number_of_head_on_approaches) AS number_of_head_on_approaches,
+             SUM(number_of_tailgating) AS number_of_tailgating,
+             SUM(number_of_near_doorings) AS number_of_near_doorings,
+             SUM(number_of_obstacle_dodges) AS number_of_obstacle_dodges
+         FROM safety_metrics__planet_osm_line s
+                  JOIN planet_osm_line l ON l.osm_id = s.osm_id
+                  JOIN region r
+                       ON l.way && r.geom3857
+                           AND ST_Contains(r.geom3857, l.way)
+         GROUP BY r.id, s.traffic_time, s.week_day, s.year
+     ),
+     combined AS (
+         SELECT
+             n.id,
+             n.week_day,
+             n.traffic_time,
+             n.year,
+             n.number_of_rides::bigint ,
+             n.total_distance,
+             coalesce(i.number_of_incidents, 0)::bigint  AS number_of_incidents,
+             coalesce(i.number_of_scary_incidents, 0)::bigint AS number_of_scary_incidents,
+             coalesce(i.number_of_pull_in_outs, 0) AS number_of_pull_in_outs,
+             coalesce(i.number_of_close_passes, 0) AS number_of_close_passes,
+             coalesce(i.number_of_near_left_right_hooks, 0) AS number_of_near_left_right_hooks,
+             coalesce(i.number_of_head_on_approaches, 0) AS number_of_head_on_approaches,
+             coalesce(i.number_of_tailgating, 0) AS number_of_tailgating,
+             coalesce(i.number_of_near_doorings, 0) AS number_of_near_doorings,
+             coalesce(i.number_of_obstacle_dodges, 0) AS number_of_obstacle_dodges
+         FROM number_of_rides_and_length n
+                  LEFT JOIN incidents i ON
+             n.id = i.id AND
+             n.week_day = i.week_day AND
+             n.traffic_time = i.traffic_time AND
+             n.year = i.year
+     )
+SELECT
+    combined.id,
+    region.name,
+    week_day,
+    traffic_time,
+    year,
+    number_of_rides,
+    total_distance,
+    number_of_incidents,
+    calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents) AS dangerous_score,
+    get_color_for_score(calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents)) AS dangerous_color,
+    number_of_scary_incidents,
+    number_of_pull_in_outs,
+    number_of_close_passes,
+    number_of_near_left_right_hooks,
+    number_of_head_on_approaches,
+    number_of_tailgating,
+    number_of_near_doorings,
+    number_of_obstacle_dodges
+FROM combined
+         JOIN region ON region.id = combined.id
+;
+
+CREATE UNIQUE INDEX IF NOT EXISTS safety_metrics__region_pk
+    ON safety_metrics__region (id, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS safety_metrics__region_dangerous
+    ON safety_metrics__region(dangerous_score);
+CREATE INDEX IF NOT EXISTS safety_metrics__region_name
+    ON safety_metrics__region (name);
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS safety_metrics__simra_region AS
+WITH region_safety AS (
+    SELECT
+        rr.simra_region_name AS name,
+        m.traffic_time,
+        m.week_day,
+        m.year,
+        SUM(total_distance)                  AS total_distance,
+        SUM(number_of_rides)::bigint         AS number_of_rides,
+        SUM(number_of_incidents)::bigint     AS number_of_incidents,
+        SUM(number_of_scary_incidents)::bigint         AS number_of_scary_incidents,
+        SUM(number_of_pull_in_outs)          AS number_of_pull_in_outs,
+        SUM(number_of_close_passes)          AS number_of_close_passes,
+        SUM(number_of_near_left_right_hooks) AS number_of_near_left_right_hooks,
+        SUM(number_of_head_on_approaches)    AS number_of_head_on_approaches,
+        SUM(number_of_tailgating)           AS number_of_tailgating,
+        SUM(number_of_near_doorings)         AS number_of_near_doorings,
+        SUM(number_of_obstacle_dodges)       AS number_of_obstacle_dodges
+    FROM safety_metrics__region m
+             JOIN simra_region__region rr
+                  ON rr.region_id = m.id
+    GROUP BY rr.simra_region_name, m.traffic_time, m.week_day, m.year
+)
+SELECT
+    name,
+    week_day,
+    traffic_time,
+    year,
+    number_of_rides,
+    total_distance,
+    number_of_incidents,
+    calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents) AS dangerous_score,
+    get_color_for_score(calculate_dangerous_score(number_of_rides, number_of_incidents, number_of_scary_incidents)) AS dangerous_color,
+    number_of_scary_incidents,
+    number_of_pull_in_outs,
+    number_of_close_passes,
+    number_of_near_left_right_hooks,
+    number_of_head_on_approaches,
+    number_of_tailgating,
+    number_of_near_doorings,
+    number_of_obstacle_dodges
+FROM region_safety
+;
+
+CREATE UNIQUE INDEX IF NOT EXISTS safety_metrics__simra_region_pk
+    ON safety_metrics__simra_region (name, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS safety_metrics__simra_region_dangerous
+    ON safety_metrics__simra_region(dangerous_score);
+CREATE INDEX IF NOT EXISTS safety_metrics__simra_region_id
+    ON safety_metrics__simra_region (name);

@@ -6,7 +6,9 @@ import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.osmPlanet.classes.dtos.RideEntityTotalDTO;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +16,23 @@ import java.util.Optional;
 public interface SimraRegionRepository extends JpaRepository<SimraRegion, Long> {
 
 	Optional<SimraRegion> findByName(String name);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+UPDATE simra_region s
+SET way = u.union_way
+FROM (
+    SELECT sr.simra_region_name,
+           ST_Union(r.way) AS union_way
+    FROM region r
+    JOIN simra_region__region sr
+        ON sr.region_id = r.id
+    GROUP BY sr.simra_region_name
+) u
+WHERE s.name = u.simra_region_name;
+""", nativeQuery = true)
+    void setSimraRegionGeometry();
 
 	@Query("""
 				SELECT SUM(ST_LENGTH_M(r.way)) AS totalDistance,
@@ -39,7 +58,6 @@ public interface SimraRegionRepository extends JpaRepository<SimraRegion, Long> 
 	@Query("SELECT r.name FROM SimraRegion sr JOIN sr.regions r WHERE sr.name = :name")
 	List<String> findRegionNames(String name);
 
-	@Query("SELECT way FROM SimraRegion WHERE name = :name")
-	Optional<Geometry> findWayByName(String name);
-
+	@Query("SELECT s FROM SimraRegion s WHERE s.name = :name")
+	Optional<SimraRegion> findWayByName(String name);
 }

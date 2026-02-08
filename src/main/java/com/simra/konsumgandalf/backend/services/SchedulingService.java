@@ -1,16 +1,13 @@
 package com.simra.konsumgandalf.backend.services;
 
 import com.simra.konsumgandalf.common.constants.CronExpressions;
+import com.simra.konsumgandalf.common.logging.LoggingAspect;
 import com.simra.konsumgandalf.common.services.OsmService;
-import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceHighwayMetrics;
-import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceRegionMetrics;
-import com.simra.konsumgandalf.osmPlanet.services.AnalyticsServiceSimraRegionMetrics;
 import com.simra.konsumgandalf.osmPlanet.services.OsmHighwayService;
 import com.simra.konsumgandalf.osmPlanet.services.RegionService;
-import com.simra.konsumgandalf.profiles.services.AnalyticsProfileService;
-import com.simra.konsumgandalf.profiles.services.ProfileService;
+import com.simra.konsumgandalf.osmPlanet.services.SafetyMetricsService;
+import com.simra.konsumgandalf.osmPlanet.services.SimraRegionService;
 import com.simra.konsumgandalf.rides.services.RideEntityService;
-import com.simra.konsumgandalf.rides.services.RideService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +23,8 @@ import java.io.IOException;
 @Profile("docker")
 @Service
 public class SchedulingService {
-
-	@Autowired
-	private RideService rideService;
+    @Autowired
+    private LoggingAspect  loggingAspect;
 
     @Autowired
     private OsmService osmService;
@@ -36,61 +32,30 @@ public class SchedulingService {
 	@Autowired
 	private RideEntityService rideEntityService;
 
-	@Autowired
-	private AnalyticsServiceHighwayMetrics analyticsServiceHighwayMetrics;
+    @Autowired
+    private SafetyMetricsService safetyMetricsService;
 
-	@Autowired
-	private AnalyticsServiceRegionMetrics analyticsServiceRegionMetrics;
-
-	@Autowired
-	private AnalyticsServiceSimraRegionMetrics analyticsServiceSimraRegionMetrics;
-
-	@Autowired
-	private ProfileService profileService;
-
-	@Autowired
-	private AnalyticsProfileService analyticsProfileService;
-
-	@Autowired
+    @Autowired
 	private OsmHighwayService osmHighwayService;
 
 	@Autowired
 	private RegionService regionService;
 
+    @Autowired
+    private SimraRegionService simraRegionService;
+
 	private static final Logger _logger = LoggerFactory.getLogger(SchedulingService.class);
 
-	@Scheduled(cron = CronExpressions.EVERY_HOUR)
+
+	@Scheduled(cron = CronExpressions.EVERY_DAY)
 	public void readNewRidesAndCalculateSafetyMetrics() {
-		rideEntityService.loadAllPreviousRidesBloomFilter();
-
-		analyticsServiceHighwayMetrics.calculateSafetyMetricsHighway();
+		int loadedRides = rideEntityService.loadAllPreviousRides();
+        if (loadedRides > 0) {
+            safetyMetricsService.updateSafetyMetrics();
+        }
 	}
 
-	@Scheduled(cron = CronExpressions.EVERY_DAY)
-	public void readNewRidesAndCalculateSafetyMetricsDaily() {
-		this.analyseRegionBasedData();
-	}
-
-	@Scheduled(cron = CronExpressions.EVERY_WEEK)
-	public void readNewRidesAndCalculateSafetyMetricsWeekly() {
-		rideEntityService.loadAllPreviousRidesDatabase();
-
-		analyticsServiceHighwayMetrics.calculateSafetyMetricsHighway();
-		this.analyseRegionBasedData();
-	}
-
-	private void analyseRegionBasedData() {
-		analyticsServiceRegionMetrics.calculateSafetyMetricsRegion();
-		analyticsServiceSimraRegionMetrics.calculateSafetyMetricsSimraRegion();
-	}
-
-	@Scheduled(cron = CronExpressions.EVERY_DAY)
-	public void readNewProfilesAndCalculateSafetyMetrics() {
-		profileService.loadAllPrevProfiles();
-		analyticsProfileService.calculateProfileSafetyMetrics();
-	}
-
-	@Scheduled(cron = CronExpressions.EVERY_DAY)
+    @Scheduled(cron = CronExpressions.EVERY_DAY)
 	public void exportJsons() {
 		try {
 			osmHighwayService.exportGridJson();
@@ -104,46 +69,28 @@ public class SchedulingService {
 	@Async
 	@EventListener(ApplicationReadyEvent.class)
 	public void init() {
+        // This requires that init PostGIS is finished:
+        // The tables planet_osm_line, and planet_osm_nodes, and planet_osm_polygon must not be empty
 		_logger.info("SchedulingService started");
+
+        if (regionService.emptyRegions()) {
+            regionService.saveRegions();
+            simraRegionService.createOrUpdateSimraRegions();
+        }
+
+        if (osmService.emptyTrafficSignals()) {
+            _logger.info("No traffic signals found, loading traffic signals.");
+            osmService.loadTrafficSignalData();
+        }
+
         if (rideEntityService.emptyRideEntities()) {
             this.readNewRidesAndCalculateSafetyMetrics();
         }
 
-		if (analyticsServiceRegionMetrics.isEmpty()) {
-			_logger.info("No region data found, calculating safety metrics for regions");
-			analyticsServiceRegionMetrics.calculateSafetyMetricsRegion();
-            analyticsServiceSimraRegionMetrics.calculateSafetyMetricsSimraRegion();
-		}
-
-		if (profileService.count() <= 3000L) {
-			_logger.info("No profile data found, calculating safety metrics for profiles");
-			readNewProfilesAndCalculateSafetyMetrics();
-		}
-
-        if (osmService.emptyTrafficSignals()) {
-            _logger.info("No traffic signals found, loading traffic signals.");
-            osmService.saveTrafficSignals();
-        }
-        if (osmService.emptyTrafficSignalClusters() && !osmService.emptyTrafficSignals()) {
-            _logger.info("No traffic signal clusters found, creating clusters.");
-            osmService.setSignalIdsOnCluster();
-            try {
-                osmService.mergeClusters();
-            } catch (IOException e) {
-                _logger.error("Failed to merge clusters.", e);
-            }
-            osmService.createClusterPolygons();
-            osmService.populateClusterLineRelations();
-            osmService.setStreetNames();
-        }
-
-        // this.rideService.clearRides();
-        // this.rideService.loadAllPreviousRides();
-
-
-		this.exportJsons();
+        this.exportJsons();
 
 		_logger.info("SchedulingService finished initialization");
+        loggingAspect.printAllStopWatches();
 	}
 
 }

@@ -1,14 +1,5 @@
 package com.simra.konsumgandalf.valhalla.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.anyList;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +16,14 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
 
 @ExtendWith(MockitoExtension.class)
 public class ValhallaTraceAttributesServiceTest {
@@ -43,67 +36,6 @@ public class ValhallaTraceAttributesServiceTest {
 	@BeforeEach
 	public void setUp() {
 		serviceSpy = spy(service);
-	}
-
-	@Nested
-	class TestCalculateStreetSegmentIdsOfRoute {
-
-		@Test
-		public void filterOutEvery3rdStep() {
-			ArrayList<MatchInformation> coordinates = new ArrayList<>();
-			for (int i = 0; i <= 10; i++) {
-				coordinates.add(new MatchInformation(52.520007, 13.404954, i));
-			}
-
-			List<MatchInformation> expectedFilteredList = new ArrayList<>();
-			expectedFilteredList.add(new MatchInformation(52.520007, 13.404954, 0));
-			expectedFilteredList.add(new MatchInformation(52.520007, 13.404954, 4));
-			expectedFilteredList.add(new MatchInformation(52.520007, 13.404954, 8));
-			List<List<MatchInformation>> expectedPartitions = new ArrayList<>();
-			expectedPartitions.add(expectedFilteredList);
-
-			Mono<List<Long>> mockIds = Mono.just(Collections.singletonList(1L));
-			doReturn(mockIds).when(serviceSpy).fetchWithRetry(anyList());
-			when(serviceSpy.combineChunks(anyList())).thenAnswer(i -> i.getArguments()[0]);
-
-			List<Long> ids = serviceSpy.calculateStreetSegmentIdsOfRoute(coordinates);
-
-			verify(serviceSpy, times(1)).fetchWithRetry(anyList());
-			verify(serviceSpy, times(1)).combineChunks(anyList());
-			assertEquals(1, ids.size());
-		}
-
-		@Test
-		public void use2Chunks() {
-			ArrayList<MatchInformation> coordinates = new ArrayList<>();
-			for (int i = 0; i <= 10001; i++) {
-				coordinates.add(new MatchInformation(52.520007, 13.404954, i * 4));
-			}
-
-			Mono<List<Long>> mockIds = Mono.just(Collections.singletonList(1L));
-			doReturn(mockIds).when(serviceSpy).fetchWithRetry(anyList());
-
-			List<Long> ids = serviceSpy.calculateStreetSegmentIdsOfRoute(coordinates);
-
-			verify(serviceSpy, times(2)).fetchWithRetry(anyList());
-			verify(serviceSpy, times(1)).combineChunks(anyList());
-			// Its 1 because distinct() in combineStepChunks
-			assertEquals(1, ids.size());
-		}
-
-	}
-
-	@Test
-	public void testCombineStepChunks() {
-		List<List<Long>> stepChunks = new ArrayList<>();
-		stepChunks.add(Collections.singletonList(1L));
-		stepChunks.add(Collections.singletonList(2L));
-
-		List<Long> combined = service.combineChunks(stepChunks);
-
-		assertEquals(2, combined.size());
-		assertEquals(1L, combined.get(0));
-		assertEquals(2L, combined.get(1));
 	}
 
 	@Nested
@@ -138,7 +70,7 @@ public class ValhallaTraceAttributesServiceTest {
 			mockWebServer
 				.enqueue(new MockResponse().setBody(jsonResponse).addHeader("Content-Type", "application/json"));
 
-			List<Long> ids = service.fetchIdsFromChunk(chunk).block();
+			List<Long> ids = service.fetchIdsFromChunk(chunk);
 
 			RecordedRequest request = mockWebServer.takeRequest();
 			assertEquals("/trace_attributes", request.getPath());
