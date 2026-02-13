@@ -8,6 +8,7 @@ import com.simra.konsumgandalf.osmPlanet.services.RegionService;
 import com.simra.konsumgandalf.osmPlanet.services.SafetyMetricsService;
 import com.simra.konsumgandalf.osmPlanet.services.SimraRegionService;
 import com.simra.konsumgandalf.rides.services.RideEntityService;
+import com.simra.konsumgandalf.rides.services.RideService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ public class SchedulingService {
 	private RideEntityService rideEntityService;
 
     @Autowired
+    private RideService rideService;
+
+    @Autowired
     private SafetyMetricsService safetyMetricsService;
 
     @Autowired
@@ -52,6 +56,7 @@ public class SchedulingService {
 		int loadedRides = rideEntityService.loadAllPreviousRides();
         if (loadedRides > 0) {
             safetyMetricsService.updateSafetyMetrics();
+            rideService.updateIntersectionMetrics();
         }
 	}
 
@@ -74,6 +79,7 @@ public class SchedulingService {
 		_logger.info("SchedulingService started");
 
         if (regionService.emptyRegions()) {
+            _logger.info("No regions found, loading regions.");
             regionService.saveRegions();
             simraRegionService.createOrUpdateSimraRegions();
         }
@@ -83,10 +89,7 @@ public class SchedulingService {
             osmService.loadTrafficSignalData();
         }
 
-        if (rideEntityService.emptyRideEntities()) {
-            this.readNewRidesAndCalculateSafetyMetrics();
-        }
-
+        this.readNewRidesAndCalculateSafetyMetrics();
         this.exportJsons();
 
 		_logger.info("SchedulingService finished initialization");

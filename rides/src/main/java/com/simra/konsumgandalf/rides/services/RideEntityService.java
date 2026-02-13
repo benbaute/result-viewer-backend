@@ -17,7 +17,6 @@ import com.simra.konsumgandalf.common.utils.services.FileReaderService;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.rides.repositories.RideEntityRepository;
 import com.simra.konsumgandalf.valhalla.services.ValhallaTraceAttributesService;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ import java.util.stream.Collectors;
 import static com.simra.konsumgandalf.common.constants.AppDates.*;
 
 @Service
-@Transactional
 public class RideEntityService {
 
     @Autowired
@@ -82,13 +80,8 @@ public class RideEntityService {
 		int counter = 0;
 
         for (String path : getNewRidePaths()) {
-            try {
-                generateNewRideEntity(path);
-                _logger.info("[{}] Processed file: {}", ++counter, path);
-            }
-            catch (Exception e) {
-                _logger.error("Error processing file: {}", path, e);
-            }
+            generateNewRideEntity(path);
+            _logger.info("[{}] Processed file: {}", ++counter, path);
         }
 
 		_logger.info("Loaded {} new rides", counter);
@@ -118,7 +111,7 @@ public class RideEntityService {
 	 * @return - The enriched ride entity
 	 */
     @LogExecutionTimeSubTask
-	public RideEntity enrichRideEntityWithCsv(String path) {
+	public RideEntity enrichRideEntityWithCsv(String path) throws IllegalArgumentException {
 		String content = fileReaderService.readFileFromPath(path);
 
 		String[] filteredParts = Arrays.stream(content.split("=+"))
@@ -129,8 +122,7 @@ public class RideEntityService {
 			.toArray(String[]::new);
 
 		if (filteredParts.length < 2) {
-			_logger.error("File does not contain enough parts");
-			return null;
+            throw new IllegalArgumentException("File does not contain enough parts");
 		}
 
 		List<RideLocation> rideLocationList = csvUtilService.parseCsvToModel(filteredParts[1], RideLocation.class)
@@ -139,17 +131,15 @@ public class RideEntityService {
 			.toList();
 
 		if (rideLocationList.size() < 2) {
-			_logger.error("File does not contain enough ride locations");
-			return null;
+			throw new IllegalArgumentException("File does not contain enough ride locations");
 		}
 
         RideEntity rideEntity = new RideEntity(path);
 		rideEntity.setRideLocations(rideLocationList);
         rideEntity.setCleanLocations(getCleanCoordinates(rideLocationList));
         if (rideEntity.getCleanLocations().size() < 5) {
-            _logger.error("File does not contain enough clean ride locations, clean size: {}, unfiltered size: {}",
-                    rideEntity.getCleanLocations().size(), rideLocationList.size());
-            return null;
+            throw new IllegalStateException("File does not contain enough clean ride locations, clean size: " +
+                    rideEntity.getCleanLocations().size() + ", unfiltered size: " + rideLocationList.size());
         }
 
         rideEntity.setCoordinates(generateCoordinateString(rideLocationList));
@@ -167,8 +157,7 @@ public class RideEntityService {
 					}));
 
 		if (rideTimestamps[0] == FALLBACK_DATE_MILLIS || rideTimestamps[1] == FALLBACK_DATE_MILLIS) {
-			_logger.warn("RideEntity at path {} uses fallback timestamp and will be discarded.", rideEntity.getPath());
-			return null;
+			throw new IllegalArgumentException("RideEntity uses fallback timestamp and will be discarded.");
 		}
 
 		rideEntity.setRideStart(new Date(rideTimestamps[0]));
@@ -266,24 +255,19 @@ public class RideEntityService {
 	 * @return - The generated ride entity
 	 */
 	public RideEntity generateNewRideEntity(String path) {
-		RideEntity rideEntity;
+        try {
+            RideEntity rideEntity = self.enrichRideEntityWithCsv(path);
 
-		try {
-			rideEntity = self.enrichRideEntityWithCsv(path);
-		}
-		catch (IllegalArgumentException e) {
-			_logger.error("Error enriching ride entity with CSV", e);
-			throw new RuntimeException(e);
-		}
+            self.linkToPlanetOsmLine(rideEntity);
+            rideService.processRideEntity(rideEntity);
 
-		if (rideEntity == null) {
-			return null;
-		}
-
-		self.linkToPlanetOsmLine(rideEntity);
-        rideService.processRideEntity(rideEntity);
-
-		return rideEntityRepository.save(rideEntity);
+            return rideEntityRepository.save(rideEntity);
+        }
+        catch (IllegalArgumentException e) {
+            _logger.error("Error processing file: {}", path, e);
+            // Create empty rideEntity, to avoid this file in later runs
+            return rideEntityRepository.save(new RideEntity(path));
+        }
 	}
 
     /**
@@ -298,7 +282,7 @@ public class RideEntityService {
 		List<Long> streetSegmentIdsOfRoute = valhallaTraceAttributesService
 			.calculateStreetSegmentIdsOfRoute(coordinates);
 		if (streetSegmentIdsOfRoute.isEmpty()) {
-			_logger.error("Could not find any street segments for ride entity with path {}", rideEntity.getPath());
+			_logger.warn("Could not find any street segments for ride entity with path {}", rideEntity.getPath());
 			return;
 		}
 
@@ -414,8 +398,4 @@ public class RideEntityService {
 	private boolean isAfterStartOfRecording(Date date) {
 		return (date != null) && date.after(START_OF_RECORDING);
 	}
-
-    public boolean emptyRideEntities() {
-        return rideEntityRepository.count() == 0;
-    }
 }

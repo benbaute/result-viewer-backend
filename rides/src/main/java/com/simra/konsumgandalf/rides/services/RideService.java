@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.rides.services;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.Edge;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
@@ -9,7 +10,6 @@ import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.*;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.services.OsmService;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
@@ -21,7 +21,6 @@ import com.simra.konsumgandalf.valhalla.models.TraceResponse;
 import com.simra.konsumgandalf.valhalla.models.ValhallaEdge;
 import com.simra.konsumgandalf.valhalla.models.ValhallaMatchedPoint;
 import com.simra.konsumgandalf.valhalla.services.ValhallaMapMatchingService;
-import jakarta.transaction.Transactional;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -35,7 +34,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-@Transactional
 public class RideService {
 
 	private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -98,6 +96,10 @@ public class RideService {
             unsortedPoints.addAll(sortedPoint);
         }
 
+        if (unsortedPoints.isEmpty()) {
+            return; // No successfully matched points, so no further calculation required
+        }
+
         putIntersectionAndTrafficSignalCluster(unsortedPoints);
         List<List<List<MatchedPoint>>> sortedRideParts = getRidePartsAndPutStops(sortedPoints);
         saveMatchedPoints(sortedPoints);
@@ -116,11 +118,11 @@ public class RideService {
         intersectionNodeRepository.saveAll(intersectionNodeList);
 	}
 
-    private List<MatchedPoint> getEnrichedPoints(Ride ride, TraceResponse traceResponse) {
+    private List<MatchedPoint> getEnrichedPoints(Ride ride, TraceResponse traceResponse) throws IllegalArgumentException {
         List<MatchedPoint> matchedPoints = new ArrayList<>();
 
         if (traceResponse.getMatchedPoints().size() != traceResponse.getPayloadCoordinates().size()) {
-            throw new RuntimeException("Mismatch between matched Points and Ride locations");
+            throw new IllegalArgumentException("Mismatch between matched Points and Ride locations");
         }
         for (int i = 0; i < traceResponse.getMatchedPoints().size(); i++) {
             ValhallaMatchedPoint p = traceResponse.getMatchedPoints().get(i);
@@ -140,7 +142,7 @@ public class RideService {
         return matchedPoints;
     }
 
-    private List<Edge> getEnrichedEdges(TraceResponse traceResponse) {
+    private List<Edge> getEnrichedEdges(TraceResponse traceResponse) throws IllegalArgumentException {
         List<Edge> edges = new ArrayList<>();
         List<Long> wayIds = traceResponse.getEdges().stream()
                 .map(ValhallaEdge::getId)
@@ -173,7 +175,7 @@ public class RideService {
                 edge.setOsmId(wayId);
                 edge.setOsmLine(linesMap.get(wayId));
             } else {
-                throw new RuntimeException("Could not find line with id " + wayId);
+                throw new IllegalArgumentException("Could not find line with id " + wayId);
             }
 
             edge.setTrafficSignalClusters(clusterMap.containsKey(wayId) ? clusterMap.get(wayId) : new ArrayList<>());
@@ -197,7 +199,7 @@ public class RideService {
      * @param traceResponse - The points and edges from valhalla
      * @return - The sorted points.
      */
-    private List<List<MatchedPoint>> getSortedPointsAndEnrichPoints(Ride ride, TraceResponse traceResponse) {
+    private List<List<MatchedPoint>> getSortedPointsAndEnrichPoints(Ride ride, TraceResponse traceResponse) throws IllegalArgumentException {
         // Enrich Valhalla Data
         List<MatchedPoint> points = getEnrichedPoints(ride, traceResponse);
         List<Edge> edges = getEnrichedEdges(traceResponse);
@@ -245,7 +247,7 @@ public class RideService {
                         sortedPoints.get(i-1).addAll(sortedPoints.get(i));
                         sortedPoints.remove(i);
                     } else if (nextWayId == null) {
-                        throw new RuntimeException("Unexpected  null error.");
+                        throw new IllegalArgumentException("Unexpected  null error.");
                     } else if (prevWayId.equals(nextWayId)) {
                         // Merge points into one edge if in between same matching edge
                         sortedPoints.get(i-1).addAll(sortedPoints.get(i));
@@ -588,8 +590,8 @@ public class RideService {
                 applyIntersectionProperties(e, intersectionEdge, ride);
 
                 intersectionEdge.setLine(e.getFirst().getLine());
-                intersectionEdge.setPrevLine((PlanetOsmLine) e.getFirst().getPrevLine());
-                intersectionEdge.setNextLine((PlanetOsmLine) e.getFirst().getNextLine());
+                intersectionEdge.setPrevLine(e.getFirst().getPrevLine());
+                intersectionEdge.setNextLine(e.getFirst().getNextLine());
                 intersectionEdgeList.add(intersectionEdge);
             }
         }
@@ -809,5 +811,11 @@ public class RideService {
 
     public List<Region> findRegionByName(String region) {
         return regionRepository.findRegionByName(region);
+    }
+
+    @LogExecutionTime
+    public void updateIntersectionMetrics() {
+        intersectionNodeMetricsRepository.updateIntersectionNodeMetrics();
+        intersectionEdgeMetricsRepository.updateIntersectionEdgeMetrics();
     }
 }

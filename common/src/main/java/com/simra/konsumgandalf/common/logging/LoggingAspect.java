@@ -26,9 +26,9 @@ public class LoggingAspect {
 
 	public static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
 
-	private final ConcurrentMap<String, Long> totalTimes = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Long> totalTimesSubTasks = new ConcurrentHashMap<>();
-    private ConcurrentMap<String, Long> timesSinceLastPrint = new ConcurrentHashMap<>();
+    // Reset after every print for completed tasks
+	private final ConcurrentMap<String, Long> times = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Long> timesSubTasks = new ConcurrentHashMap<>();
 
 	@Autowired
 	private ThreadPoolTaskExecutor taskExecutor;
@@ -49,60 +49,63 @@ public class LoggingAspect {
             stopWatch.stop();
             long elapsed = stopWatch.getTotalTimeMillis();
 
-            timesSinceLastPrint.merge(sig.getName(), elapsed, Long::sum);
             totalTimesMap.merge(key, elapsed, Long::sum);
         }
     }
 
 	@Around("@annotation(com.simra.konsumgandalf.common.logging.LogExecutionTime)")
 	public Object methodTimeLogger(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
-        return methodTimeLogger(proceedingJoinPoint, totalTimes);
+        return methodTimeLogger(proceedingJoinPoint, times);
 	}
 
     @Around("@annotation(com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask)")
     public Object methodTimeLoggerSubTask(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
-        return methodTimeLogger(proceedingJoinPoint, totalTimesSubTasks);
+        return methodTimeLogger(proceedingJoinPoint, timesSubTasks);
     }
 
 	@Scheduled(cron = CronExpressions.EVERY_HOUR)
 	public void printAllStopWatches() {
         List<MethodRun> methodRuns = new ArrayList<>();
-        timesSinceLastPrint.keySet().stream().sorted().forEach(key -> {
-            long time = timesSinceLastPrint.get(key);
-            methodRuns.add(new MethodRun(key, time));
-        });
-        methodRunRepository.saveAll(methodRuns);
-        timesSinceLastPrint = new ConcurrentHashMap<>();
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("------------------------------------------------------------------------\n");
 		sb.append("Seconds       %       Task name\n");
 		sb.append("------------------------------------------------------------------------\n");
 
-		long totalTime = totalTimes.values().stream().mapToLong(Long::longValue).sum();
+		long totalTime = times.values().stream().mapToLong(Long::longValue).sum();
 
-		totalTimes.keySet().stream().sorted().forEach(key -> {
-			long time = totalTimes.get(key);
-			double timeSeconds = time / 1000.0;
-			int percentage = (int) ((time * 100.0) / totalTime);
-			sb.append(String.format("%-13.4f %-8d %-30s\n", timeSeconds, percentage, key));
-		});
+		times.keySet().stream().sorted().forEach(key -> {
+			long time = times.get(key);
+            if (time <= 0) return;
+            double timeSeconds = time / 1000.0;
+            int percentage = (int) ((time * 100.0) / totalTime);
+            sb.append(String.format("%-13.4f %-8d %-30s\n", timeSeconds, percentage, key));
+            methodRuns.add(new MethodRun(key, time));
+            times.put(key, 0L); // Reset timer
+        });
 
         sb.append("------------------------------------------------------------------------\n");
         sb.append("Subtasks\n");
         sb.append("------------------------------------------------------------------------\n");
         sb.append("Seconds       Task name\n");
         sb.append("------------------------------------------------------------------------\n");
-        totalTimesSubTasks.keySet().stream().sorted().forEach(key -> {
-            long time = totalTimesSubTasks.get(key);
+        timesSubTasks.keySet().stream().sorted().forEach(key -> {
+            long time = timesSubTasks.get(key);
+            if (time <= 0) return;
             double timeSeconds = time / 1000.0;
             sb.append(String.format("%-13.4f %-30s\n", timeSeconds, key));
+            methodRuns.add(new MethodRun(key, time));
+            timesSubTasks.put(key, 0L); // Reset timer
         });
 
 		sb.append("------------------------------------------------------------------------\n");
 		sb.append(String.format("Active Tasks: %d\n", taskExecutor.getActiveCount()));
 		sb.append(String.format("Number of Queue items: %d\n", taskExecutor.getQueueSize()));
 		sb.append("------------------------------------------------------------------------\n");
+
+        if (!methodRuns.isEmpty()) {
+            methodRunRepository.saveAll(methodRuns);
+        }
 
 		if (logger.isInfoEnabled()) {
 			logger.info(sb.toString());
