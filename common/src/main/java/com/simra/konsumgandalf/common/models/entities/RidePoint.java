@@ -39,7 +39,7 @@ public class RidePoint implements FeatureMappable {
         Map<String, Object> properties = new HashMap<>();
         properties.put("timestamp", this.getTimestamp());
         properties.put("path", this.getRide().getPath());
-        properties.put("ride_id", this.ride.getId());
+        properties.put("rideId", this.ride.getId());
         return properties;
     }
 }

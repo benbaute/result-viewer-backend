@@ -6,25 +6,52 @@ import org.geotools.referencing.GeodeticCalculator;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
 public class GeoService {
-    public static <T extends FeatureMappable>
-    Map<String, Object> getFeatureCollection(List<T> elements) {
-        List<Map<String, Object>> features = elements.stream()
-                .map(FeatureMappable::getFeatureMap)
-                .toList();
-
-        Map<String, Object> featureCollection = new HashMap<>();
-        featureCollection.put("type", "FeatureCollection");
-        featureCollection.put("features", features);
-
-        return featureCollection;
+    private static Map<String, Object> createFeatureCollection(List<Map<String, Object>> features) {
+        return Map.of(
+            "type", "FeatureCollection",
+            "features", features
+        );
     }
 
+    public static Map<String, Object> getFeatureCollection(List<? extends FeatureMappable> elements) {
+        return createFeatureCollection(elements.stream().map(FeatureMappable::getFeatureMap).toList());
+    }
+
+    public static Map<String, Object> getFeatureCollection(Page<? extends FeatureMappable> page) {
+        return Map.of(
+                "metadata", Map.of(
+                        "totalElements", page.getTotalElements(),
+                        "totalPages", page.getTotalPages(),
+                        "currentPage", page.getNumber()
+                ),
+                "geoData", createFeatureCollection(page.getContent().stream().filter(Objects::nonNull)
+                        .map(FeatureMappable::getFeatureMap).toList())
+        );
+    }
+
+    public double calculateAverage(List<Double> values) {
+        double sum = 0.0;
+        for (Double value : values) {
+            sum += value;
+        }
+        return sum / values.size();
+    }
+
+    public double calculateStandardDeviation (List<Double> values) {
+        double average = calculateAverage(values);
+        List<Double> standardDeviations = new ArrayList<>();
+        for (Double value : values) {
+            standardDeviations.add(Math.pow(value - average, 2));
+        }
+        return Math.sqrt(calculateAverage(standardDeviations));
+    }
 
 	public double haversine(double lat1, double lon1, double lat2, double lon2) {
 		final double R = 6371000;

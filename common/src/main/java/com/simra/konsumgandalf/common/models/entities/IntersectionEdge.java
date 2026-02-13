@@ -127,9 +127,9 @@ public class IntersectionEdge extends IntersectionBaseClass implements FeatureMa
         PlanetOsmLine line = this.getLine();
         PlanetOsmLine prevLine = this.getPrevLine();
         PlanetOsmLine nextLine = this.getNextLine();
-        properties.put("osm_id", line != null ? line.getId() : null);
-        properties.put("prev_osm_id", prevLine != null ? prevLine.getId() : null);
-        properties.put("next_osm_id", nextLine != null ? nextLine.getId() : null);
+        properties.put("osmId", line != null ? line.getId() : null);
+        properties.put("prevOsmId", prevLine != null ? prevLine.getId() : null);
+        properties.put("nextOsmId", nextLine != null ? nextLine.getId() : null);
         properties.put("name", line != null ? line.getName() : null);
         return properties;
     }

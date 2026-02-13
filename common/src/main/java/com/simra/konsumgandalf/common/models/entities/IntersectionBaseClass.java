@@ -69,16 +69,16 @@ public abstract class IntersectionBaseClass extends TimeBaseClass {
     public Map<String, Object> getBaseProperties() {
         Map<String, Object> properties = new HashMap<>();
         properties.put("id", getId());
-        properties.put("start_time", this.getStartTime());
-        properties.put("end_time", this.getEndTime());
+        properties.put("startTime", this.getStartTime());
+        properties.put("endTime", this.getEndTime());
         properties.put("duration", this.getDuration());
         properties.put("length", this.getLength());
         properties.put("speed", this.getSpeed());
-        properties.put("waiting_time", this.getWaitingTime());
-        properties.put("ride_id", this.getRide().getId());
+        properties.put("waitingTime", this.getWaitingTime());
+        properties.put("rideId", this.getRide().getId());
         properties.put("year", this.getYear());
-        properties.put("day_of_week", this.getWeekDay());
-        properties.put("traffic_time", this.getTrafficTime());
+        properties.put("dayOfWeek", this.getWeekDay());
+        properties.put("trafficTime", this.getTrafficTime());
         return properties;
     }
 

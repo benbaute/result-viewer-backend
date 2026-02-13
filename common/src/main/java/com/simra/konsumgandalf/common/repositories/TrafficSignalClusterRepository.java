@@ -56,7 +56,6 @@ FROM clusterized;
     @Modifying
     @Transactional
     @Query(value = """
-
 WITH intersection AS (
     SELECT
         c.id AS cluster_id,
@@ -70,6 +69,8 @@ WITH intersection AS (
 INSERT INTO traffic_signal_cluster__planet_osm_line (traffic_signal_cluster_id, osm_id)
 SELECT cluster_id, line_id
 FROM intersection
+
+
 """, nativeQuery = true)
     void populateClusterLineRelations();
 

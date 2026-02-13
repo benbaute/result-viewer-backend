@@ -85,13 +85,13 @@ public class MatchedPoint implements FeatureMappable {
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();
+        properties.put("rideId", this.ride.getId());
         properties.put("timestamp", this.getTimestamp());
-        properties.put("edge_id", this.getEdgeId());
-        properties.put("point_in_edge_id", this.getPointInEdgeId());
-        properties.put("way_id", this.getLine() != null ? this.getLine().getId() : "null");
+        properties.put("edgeId", this.getEdgeId());
+        properties.put("pointInEdgeId", this.getPointInEdgeId());
+        properties.put("wayId", this.getLine() != null ? this.getLine().getId() : "null");
         properties.put("inIntersection", this.getInIntersection());
-        properties.put("ride_id", this.ride.getId());
-        properties.put("distance_from_trace_point", this.getDistanceFromTracePoint());
+        properties.put("distanceFromTracePoint", this.getDistanceFromTracePoint());
         properties.put("stops", this.getStops());
         return properties;
     }

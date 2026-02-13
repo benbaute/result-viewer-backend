@@ -56,7 +56,7 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
                 OR EXISTS (
                     SELECT 1
                     FROM intersection_edge__region er
-                    JOIN region r ON r.name = er.region_id
+                    JOIN region r ON r.id = er.region_id
                     WHERE er.edge_id = edge.id
                     AND r.name = :region
                 )

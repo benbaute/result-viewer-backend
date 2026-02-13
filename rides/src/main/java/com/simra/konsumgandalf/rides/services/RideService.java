@@ -7,10 +7,15 @@ import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
 import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
 import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.*;
+import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
+import com.simra.konsumgandalf.common.models.enums.WeekDays;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import com.simra.konsumgandalf.common.repositories.PlanetOsmLineRepository;
 import com.simra.konsumgandalf.common.services.OsmService;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.osmPlanet.repositories.RegionRepository;
+import com.simra.konsumgandalf.rides.classes.specifications.IntersectionEdgeMetricsSpecifications;
+import com.simra.konsumgandalf.rides.classes.specifications.IntersectionNodeMetricsSpecifications;
 import com.simra.konsumgandalf.rides.repositories.*;
 import com.simra.konsumgandalf.valhalla.models.TraceResponse;
 import com.simra.konsumgandalf.valhalla.models.ValhallaEdge;
@@ -22,6 +27,9 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -48,7 +56,13 @@ public class RideService {
     private IntersectionNodeRepository intersectionNodeRepository;
 
     @Autowired
+    private IntersectionNodeMetricsRepository intersectionNodeMetricsRepository;
+
+    @Autowired
     private IntersectionEdgeRepository intersectionEdgeRepository;
+
+    @Autowired
+    private IntersectionEdgeMetricsRepository intersectionEdgeMetricsRepository;
 
     @Autowired
     private RegionRepository regionRepository;
@@ -729,6 +743,24 @@ public class RideService {
         return intersectionNodeRepository.aggregateNodes(trafficSignalClusterId, count, region, streetNames);
     }
 
+    public Map<String, Object> getIntersectionNodeMetrics(
+            Long trafficSignalClusterId, Long count, String region, String streetNames,
+            List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
+
+        Specification<IntersectionNodeMetrics> spec = Specification
+                .where(IntersectionNodeMetricsSpecifications.hasTrafficSignalClusterId(trafficSignalClusterId))
+                .and(IntersectionNodeMetricsSpecifications.hasMinCount(count))
+                .and(IntersectionNodeMetricsSpecifications.hasName(streetNames))
+                .and(IntersectionNodeMetricsSpecifications.hasRegion(region))
+                .and(IntersectionNodeMetricsSpecifications.hasWeekDay(weekDay)
+                .and(IntersectionNodeMetricsSpecifications.hasTrafficTime(trafficTime)
+                .and(IntersectionNodeMetricsSpecifications.hasYear(year))));
+
+        Page<IntersectionNodeMetrics> result = intersectionNodeMetricsRepository.findAll(spec, pageable);
+
+        return GeoService.getFeatureCollection(result);
+    }
+
     public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId,
               Long count, String region, String streetNames) {
         return intersectionNodeRepository.findAllIncludingString(trafficSignalClusterId, count, region, streetNames);
@@ -740,6 +772,23 @@ public class RideService {
 
     public List<IntersectionEdgeAggregate> aggregateEdges(Long count, String region, String name) {
         return intersectionEdgeRepository.aggregateEdges(count, region, name);
+    }
+
+    public Map<String, Object> getIntersectionEdgeMetrics(
+            Long count, String region, String name,
+            List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
+
+        Specification<IntersectionEdgeMetrics> spec = Specification
+                .where(IntersectionEdgeMetricsSpecifications.hasMinCount(count))
+                .and(IntersectionEdgeMetricsSpecifications.hasName(name))
+                .and(IntersectionEdgeMetricsSpecifications.hasRegion(region))
+                .and(IntersectionEdgeMetricsSpecifications.hasWeekDay(weekDay))
+                .and(IntersectionEdgeMetricsSpecifications.hasTrafficTime(trafficTime))
+                .and(IntersectionEdgeMetricsSpecifications.hasYear(year));
+
+        Page<IntersectionEdgeMetrics> result = intersectionEdgeMetricsRepository.findAll(spec, pageable);
+
+        return GeoService.getFeatureCollection(result);
     }
 
     public List<String> findAllStreetNamesIntersectionEdge(Long count, String region, String name) {

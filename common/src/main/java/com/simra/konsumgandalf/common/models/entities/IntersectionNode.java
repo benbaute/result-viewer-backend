@@ -132,12 +132,12 @@ public class IntersectionNode extends IntersectionBaseClass implements FeatureMa
         Map<String, Object> properties = this.getBaseProperties();
         PlanetOsmLine startLine = this.getStartLine();
         PlanetOsmLine endLine = this.getEndLine();
-        properties.put("start_osm_id", startLine != null ? startLine.getId() : null);
-        properties.put("end_osm_id", endLine != null ? endLine.getId() : null);
-        properties.put("start_name", startLine != null ? startLine.getName() : null);
-        properties.put("end_name", endLine != null ? endLine.getName() : null);
-        properties.put("street_names", this.getStreetNames());
-        properties.put("traffic_signal_cluster_id", this.trafficSignalCluster.getId());
+        properties.put("startOsmId", startLine != null ? startLine.getId() : null);
+        properties.put("endOsmId", endLine != null ? endLine.getId() : null);
+        properties.put("startName", startLine != null ? startLine.getName() : null);
+        properties.put("endName", endLine != null ? endLine.getName() : null);
+        properties.put("streetNames", this.getStreetNames());
+        properties.put("trafficSignalClusterId", this.trafficSignalCluster.getId());
         return properties;
     }
 
