@@ -1,31 +1,19 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-import com.simra.konsumgandalf.common.models.enums.WeekDays;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import org.locationtech.jts.geom.LineString;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Getter
 @MappedSuperclass
-public abstract class IntersectionBaseClassMetrics {
+public abstract class IntersectionBaseClassMetrics extends TimeBaseClass {
 
     @Id
     private Long id;
-
-    @Column(name = "traffic_time", length = 21)
-    @Enumerated(EnumType.STRING)
-    private TrafficTimes trafficTime;
-
-    @Column(name = "week_day", length = 12)
-    @Enumerated(EnumType.STRING)
-    private WeekDays weekDay;
-
-    @Column(name = "year")
-    private Integer year;
 
     @Column(name="geom", columnDefinition = "geometry(LineString,4326)")
     private LineString geom;
@@ -52,10 +40,7 @@ public abstract class IntersectionBaseClassMetrics {
     private double medianWaitingTime;
 
     public Map<String, Object> getBaseProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("trafficTime", trafficTime);
-        properties.put("weekDay", weekDay);
-        properties.put("year", year);
+        Map<String, Object> properties = super.getBaseProperties();
         properties.put("id", exampleId);
         properties.put("numberOfRides", numberOfRides);
         properties.put("medianLength", medianLength);

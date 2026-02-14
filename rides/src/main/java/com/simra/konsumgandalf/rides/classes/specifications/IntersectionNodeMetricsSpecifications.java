@@ -10,7 +10,6 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.List;
 
 public class IntersectionNodeMetricsSpecifications {
     public static Specification<IntersectionNodeMetrics> hasTrafficSignalClusterId(Long trafficSignalClusterId) {
@@ -59,21 +58,18 @@ public class IntersectionNodeMetricsSpecifications {
         };
     }
 
-    public static Specification<IntersectionNodeMetrics> hasWeekDay(List<WeekDays> weekDay) {
+    public static Specification<IntersectionNodeMetrics> hasWeekDay(WeekDays weekDay) {
         return (root, query, cb) ->
-            weekDay == null || weekDay.isEmpty() ?
-                    cb.conjunction() : root.get("weekDay").in(weekDay);
+                cb.equal(root.get("weekDay"), (weekDay.toString()));
     }
 
-    public static Specification<IntersectionNodeMetrics> hasTrafficTime(List<TrafficTimes> trafficTime) {
+    public static Specification<IntersectionNodeMetrics> hasTrafficTime(TrafficTimes trafficTime) {
         return (root, query, cb) ->
-            trafficTime == null || trafficTime.isEmpty() ?
-                    cb.conjunction() : root.get("trafficTime").in(trafficTime);
+                cb.equal(root.get("trafficTime"), (trafficTime.toString()));
     }
 
-    public static Specification<IntersectionNodeMetrics> hasYear(List<Integer> year) {
+    public static Specification<IntersectionNodeMetrics> hasYear(Integer year) {
         return (root, query, cb) ->
-            year == null || year.isEmpty() ?
-                    cb.conjunction() : root.get("year").in(year);
+                cb.equal(root.get("year"), (year));
     }
 }

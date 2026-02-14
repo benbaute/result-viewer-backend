@@ -1,6 +1,5 @@
 package com.simra.konsumgandalf.rides.controllers;
 
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
@@ -67,9 +66,9 @@ public class RideController {
             @RequestParam(required = false) Long numberOfRides,
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String streetNames,
-            @RequestParam(required = false) List<WeekDays> weekDay,
-            @RequestParam(required = false) List<TrafficTimes> trafficTime,
-            @RequestParam(required = false) List<Integer> year,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year,
             Pageable pageable) {
 
         return ResponseEntity.ok(rideService.getIntersectionNodeMetricsPageable(
@@ -111,9 +110,9 @@ public class RideController {
             @RequestParam(required = false) Long numberOfRides,
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) List<WeekDays> weekDay,
-            @RequestParam(required = false) List<TrafficTimes> trafficTime,
-            @RequestParam(required = false) List<Integer> year,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year,
             Pageable pageable) {
         return ResponseEntity.ok(rideService.getIntersectionEdgeMetricsPageable(
                 numberOfRides, region, name, weekDay, trafficTime, year, pageable));
@@ -139,12 +138,28 @@ public class RideController {
         return ResponseEntity.ok(rideIds);
     }
 
-    @GetMapping("/regions/aggregate")
-    public ResponseEntity<Map<String, Object>> getAggregateIntersectionDataPerRegion(
-            @RequestParam(required = false) String region
+    @GetMapping("/regions/complete")
+    public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsComplete(
+            @RequestParam(required = false) Long numberOfRides,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year
     ) {
-        List<RegionAggregate> regions = rideService.aggregateIntersectionDataPerRegion(region);
-        return ResponseEntity.ok(GeoService.getFeatureCollection(regions));
+        return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionRegionMetricsComplete(
+                numberOfRides, weekDay, trafficTime, year)));
+    }
+
+    @GetMapping("/regions/pageable")
+    public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsPageable(
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) Long numberOfRides,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(rideService.getIntersectionRegionMetricsPageable(
+                regionId, numberOfRides, weekDay, trafficTime, year, pageable));
     }
 
     @GetMapping("/regions/polygon")

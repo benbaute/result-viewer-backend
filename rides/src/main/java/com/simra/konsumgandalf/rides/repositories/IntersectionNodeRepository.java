@@ -1,11 +1,9 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

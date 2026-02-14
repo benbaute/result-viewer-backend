@@ -4,7 +4,6 @@ import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.Edge;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.*;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
@@ -14,6 +13,7 @@ import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.osmPlanet.repositories.RegionRepository;
 import com.simra.konsumgandalf.rides.classes.specifications.IntersectionEdgeMetricsSpecifications;
 import com.simra.konsumgandalf.rides.classes.specifications.IntersectionNodeMetricsSpecifications;
+import com.simra.konsumgandalf.rides.classes.specifications.IntersectionRegionMetricsSpecifications;
 import com.simra.konsumgandalf.rides.repositories.*;
 import com.simra.konsumgandalf.valhalla.models.TraceResponse;
 import com.simra.konsumgandalf.valhalla.models.ValhallaEdge;
@@ -24,7 +24,6 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -59,6 +58,9 @@ public class RideService {
 
     @Autowired
     private IntersectionEdgeMetricsRepository intersectionEdgeMetricsRepository;
+
+    @Autowired
+    private IntersectionRegionMetricsRepository intersectionRegionMetricsRepository;
 
     @Autowired
     private RegionRepository regionRepository;
@@ -746,7 +748,7 @@ public class RideService {
 
     public Map<String, Object> getIntersectionNodeMetricsPageable(
             Long trafficSignalClusterId, Long count, String region, String streetNames,
-            List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
+            WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
         Specification<IntersectionNodeMetrics> spec = Specification
                 .where(IntersectionNodeMetricsSpecifications.hasTrafficSignalClusterId(trafficSignalClusterId))
@@ -757,9 +759,7 @@ public class RideService {
                 .and(IntersectionNodeMetricsSpecifications.hasTrafficTime(trafficTime)
                 .and(IntersectionNodeMetricsSpecifications.hasYear(year))));
 
-        Page<IntersectionNodeMetrics> result = intersectionNodeMetricsRepository.findAll(spec, pageable);
-
-        return GeoService.getFeatureCollection(result);
+        return GeoService.getFeatureCollection(intersectionNodeMetricsRepository.findAll(spec, pageable));
     }
 
     public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId,
@@ -779,7 +779,7 @@ public class RideService {
 
     public Map<String, Object> getIntersectionEdgeMetricsPageable(
             Long count, String region, String name,
-            List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
+            WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
         Specification<IntersectionEdgeMetrics> spec = Specification
                 .where(IntersectionEdgeMetricsSpecifications.hasMinCount(count))
@@ -789,9 +789,7 @@ public class RideService {
                 .and(IntersectionEdgeMetricsSpecifications.hasTrafficTime(trafficTime))
                 .and(IntersectionEdgeMetricsSpecifications.hasYear(year));
 
-        Page<IntersectionEdgeMetrics> result = intersectionEdgeMetricsRepository.findAll(spec, pageable);
-
-        return GeoService.getFeatureCollection(result);
+        return GeoService.getFeatureCollection(intersectionEdgeMetricsRepository.findAll(spec, pageable));
     }
 
     public List<String> findAllStreetNamesIntersectionEdge(Long count, String region, String name) {
@@ -806,8 +804,23 @@ public class RideService {
         return intersectionEdgeRepository.findByOsmLineId(osmLineId);
     }
 
-    public List<RegionAggregate> aggregateIntersectionDataPerRegion(String region) {
-        return regionRepository.aggregateIntersectionDataPerRegion(region);
+    public List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(
+            Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+        return intersectionRegionMetricsRepository.getIntersectionRegionMetricsComplete(
+                numberOfRides, weekDay.toString(), trafficTime.toString(), year);
+    }
+
+    public Map<String, Object> getIntersectionRegionMetricsPageable(
+            Long regionId, Long count, WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
+
+        Specification<IntersectionRegionMetrics> spec = Specification
+                .where(IntersectionRegionMetricsSpecifications.hasRegionId(regionId))
+                .and(IntersectionRegionMetricsSpecifications.hasMinCount(count))
+                .and(IntersectionRegionMetricsSpecifications.hasWeekDay(weekDay))
+                .and(IntersectionRegionMetricsSpecifications.hasTrafficTime(trafficTime))
+                .and(IntersectionRegionMetricsSpecifications.hasYear(year));
+
+        return GeoService.getFeatureCollection(intersectionRegionMetricsRepository.findAll(spec, pageable));
     }
 
     public List<Region> findRegionByName(String region) {
@@ -818,5 +831,6 @@ public class RideService {
     public void updateIntersectionMetrics() {
         intersectionNodeMetricsRepository.updateIntersectionNodeMetrics();
         intersectionEdgeMetricsRepository.updateIntersectionEdgeMetrics();
+        intersectionRegionMetricsRepository.updateIntersectionRegionMetrics();
     }
 }

@@ -3,8 +3,6 @@ package com.simra.konsumgandalf.common.models.entities;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
 import lombok.Getter;
 
 import java.util.Map;
