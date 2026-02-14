@@ -31,7 +31,7 @@ public class GeoService {
                         "totalPages", page.getTotalPages(),
                         "currentPage", page.getNumber()
                 ),
-                "geoData", createFeatureCollection(page.getContent().stream().filter(Objects::nonNull)
+                "geoData", createFeatureCollection(page.getContent().stream()
                         .map(FeatureMappable::getFeatureMap).toList())
         );
     }

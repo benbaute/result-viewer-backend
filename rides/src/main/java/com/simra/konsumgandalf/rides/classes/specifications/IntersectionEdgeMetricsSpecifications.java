@@ -2,7 +2,6 @@ package com.simra.konsumgandalf.rides.classes.specifications;
 
 import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
 import com.simra.konsumgandalf.common.models.entities.IntersectionEdgeMetrics;
-import com.simra.konsumgandalf.common.models.entities.IntersectionNodeMetrics;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;

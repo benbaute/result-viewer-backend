@@ -15,17 +15,6 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
     List<IntersectionNode> findByRideId(Long rideId);
 
     @Query(
-            name = "IntersectionNode.aggregateNodes",
-            nativeQuery = true
-    )
-    List<IntersectionNodeAggregate> aggregateNodes(
-            @Param("trafficSignalClusterId") Long trafficSignalClusterId,
-            @Param("count") Long count,
-            @Param("region") String region,
-            @Param("streetNames") String streetNames
-    );
-
-    @Query(
             value = """
     SELECT *
     FROM intersection_node

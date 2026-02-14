@@ -16,8 +16,8 @@ import java.util.Optional;
 
 public interface RegionRepository extends JpaRepository<Region, Long> {
 
-    @Query("SELECT r FROM Region r WHERE r.name = :name")
-	Optional<Region> findByName(String name);
+    @Query("SELECT r FROM Region r WHERE r.name = :name AND r.adminLevel IN (4, 6) ORDER BY r.adminLevel ASC")
+	List<Region> findByName(String name);
 
 	@Query("SELECT r.way FROM Region r WHERE r.name = :name")
 	Optional<Geometry> findRegionWayByName(String name);

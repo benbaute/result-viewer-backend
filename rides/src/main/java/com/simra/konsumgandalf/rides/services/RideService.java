@@ -4,8 +4,6 @@ import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.Edge;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
-import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
-import com.simra.konsumgandalf.common.models.dtos.IntersectionNodeAggregate;
 import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.*;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
@@ -740,12 +738,13 @@ public class RideService {
         return intersectionNodeRepository.findByClusterIdStartEndOsmId(trafficSignalClusterId, startOsmId, endOsmId);
     }
 
-    public List<IntersectionNodeAggregate> aggregateNodes(Long trafficSignalClusterId, Long count, String region,
-                                                          String streetNames) {
-        return intersectionNodeRepository.aggregateNodes(trafficSignalClusterId, count, region, streetNames);
+    public List<IntersectionNodeMetrics> getIntersectionNodeMetricsComplete(
+            Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+        return intersectionNodeMetricsRepository.getIntersectionNodeMetricsComplete(
+                numberOfRides, weekDay.toString(), trafficTime.toString(), year);
     }
 
-    public Map<String, Object> getIntersectionNodeMetrics(
+    public Map<String, Object> getIntersectionNodeMetricsPageable(
             Long trafficSignalClusterId, Long count, String region, String streetNames,
             List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
 
@@ -772,11 +771,13 @@ public class RideService {
         return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevOsmId, osmId, nextOsmId);
     }
 
-    public List<IntersectionEdgeAggregate> aggregateEdges(Long count, String region, String name) {
-        return intersectionEdgeRepository.aggregateEdges(count, region, name);
+    public List<IntersectionEdgeMetrics> getIntersectionEdgeMetricsComplete(
+            Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+        return intersectionEdgeMetricsRepository.getIntersectionEdgeMetricsComplete(
+                numberOfRides, weekDay.toString(), trafficTime.toString(), year);
     }
 
-    public Map<String, Object> getIntersectionEdgeMetrics(
+    public Map<String, Object> getIntersectionEdgeMetricsPageable(
             Long count, String region, String name,
             List<WeekDays> weekDay, List<TrafficTimes> trafficTime, List<Integer> year, Pageable pageable) {
 

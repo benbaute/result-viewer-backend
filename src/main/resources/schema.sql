@@ -425,6 +425,7 @@ CREATE INDEX IF NOT EXISTS safety_metrics__simra_region_id
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_edge_metrics AS
 SELECT
+    row_number() OVER () AS id, -- primary key for hibernate
     agg.osm_id,
     agg.prev_osm_id,
     agg.next_osm_id,
@@ -480,6 +481,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_node_metrics AS
 SELECT
+    row_number() OVER () AS id, -- primary key for hibernate
     agg.start_osm_id,
     agg.end_osm_id,
 

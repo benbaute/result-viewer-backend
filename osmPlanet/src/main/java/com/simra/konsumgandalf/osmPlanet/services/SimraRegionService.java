@@ -49,12 +49,11 @@ public class SimraRegionService {
             simraRegion.setName(simraRegionName);
             List<Region> regions = new ArrayList<>();
             for (String regionString : entry.getValue()) {
-                Optional<Region> optionalRegion = regionRepository.findByName(regionString);
+                List<Region> optionalRegion = regionRepository.findByName(regionString);
                 if (optionalRegion.isEmpty()) {
                     continue;
                 }
-                Region region = optionalRegion.get();
-                regions.add(region);
+                regions.add(optionalRegion.getFirst());
             }
             if (regions.isEmpty()) {
                 _logger.info("No regions found for simra region {}", simraRegionName);

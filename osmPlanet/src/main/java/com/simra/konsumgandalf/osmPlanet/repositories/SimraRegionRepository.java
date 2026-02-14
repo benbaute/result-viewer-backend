@@ -24,7 +24,7 @@ UPDATE simra_region s
 SET way = u.union_way
 FROM (
     SELECT sr.simra_region_name,
-           ST_Union(r.way) AS union_way
+           ST_ConvexHull(ST_Union(r.way)) AS union_way
     FROM region r
     JOIN simra_region__region sr
         ON sr.region_id = r.id

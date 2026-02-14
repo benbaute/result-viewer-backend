@@ -12,17 +12,18 @@ import java.util.Map;
 @Getter
 @MappedSuperclass
 public abstract class IntersectionBaseClassMetrics {
+
     @Id
+    private Long id;
+
     @Column(name = "traffic_time", length = 21)
     @Enumerated(EnumType.STRING)
     private TrafficTimes trafficTime;
 
-    @Id
     @Column(name = "week_day", length = 12)
     @Enumerated(EnumType.STRING)
     private WeekDays weekDay;
 
-    @Id
     @Column(name = "year")
     private Integer year;
 

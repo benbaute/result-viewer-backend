@@ -1,7 +1,5 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.simra.konsumgandalf.common.models.classes.IntersectionEdgeMetricsIDKey;
-import com.simra.konsumgandalf.common.models.classes.SafetyMetricsIDKey;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,20 +11,15 @@ import java.util.Map;
 
 @Getter
 @Entity
-@IdClass(IntersectionEdgeMetricsIDKey.class)
 @org.hibernate.annotations.Immutable
 @org.hibernate.annotations.Subselect("select * from intersection_edge_metrics")
 public class IntersectionEdgeMetrics extends IntersectionBaseClassMetrics implements FeatureMappable {
-
-    @Id
     @Column(name = "osm_id")
     private Long osmId;
 
-    @Id
     @Column(name = "prev_osm_id")
     private Long prevOsmId;
 
-    @Id
     @Column(name = "next_osm_id")
     private Long nextOsmId;
 

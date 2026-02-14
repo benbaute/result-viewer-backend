@@ -1,6 +1,8 @@
 package com.simra.konsumgandalf.rides.classes.specifications;
 
-import com.simra.konsumgandalf.common.models.entities.*;
+import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
+import com.simra.konsumgandalf.common.models.entities.IntersectionNodeMetrics;
+import com.simra.konsumgandalf.common.models.entities.Region;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import jakarta.persistence.criteria.Join;
