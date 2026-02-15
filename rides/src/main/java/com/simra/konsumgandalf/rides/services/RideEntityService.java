@@ -263,7 +263,7 @@ public class RideEntityService {
 
             return rideEntityRepository.save(rideEntity);
         }
-        catch (IllegalArgumentException e) {
+        catch (Exception e) {
             _logger.error("Error processing file: {}", path, e);
             // Create empty rideEntity, to avoid this file in later runs
             return rideEntityRepository.save(new RideEntity(path));

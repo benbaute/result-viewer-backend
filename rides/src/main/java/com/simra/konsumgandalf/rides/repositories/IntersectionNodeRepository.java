@@ -39,9 +39,10 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
                 :region IS NULL
                 OR EXISTS (
                     SELECT 1
-                    FROM intersection_node__region nr
-                    JOIN region r ON r.id = nr.region_id
-                    WHERE nr.node_id = node.id
+                    FROM intersection_base base
+                    JOIN intersection__region ir ON base.id = ir.intersection_id
+                    JOIN region r ON r.id = ir.region_id
+                    WHERE base.id = node.id
                     AND r.name = :region
                 )
             )

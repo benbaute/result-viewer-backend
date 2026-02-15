@@ -11,7 +11,7 @@ import java.util.Map;
 @Entity
 @org.hibernate.annotations.Immutable
 @org.hibernate.annotations.Subselect("select * from intersection_node_metrics")
-public class IntersectionNodeMetrics extends IntersectionBaseClassMetrics implements FeatureMappable {
+public class IntersectionNodeMetrics extends IntersectionBaseMetrics implements FeatureMappable {
 
     @Column(name = "start_osm_id")
     private Long startOsmId;

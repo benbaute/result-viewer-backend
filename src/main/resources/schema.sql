@@ -272,6 +272,8 @@ WITH base_number_of_rides_and_length AS (
            r.week_day,
            r.year as year,
            COUNT(*) as totalRides,
+           --  st_intersection is expensive and slows down each REFRESH
+           -- TODO: Remove all geometry operations from materialized views
            SUM(ST_Length_M(ST_Intersection(r.way, region.way))) as totalDistance
     FROM region
              JOIN ride_entity r ON st_intersects(region.way, r.way)
@@ -434,7 +436,7 @@ SELECT
     agg.traffic_time,
     agg.year,
 
-    example.geom AS geom,
+    example_base.geom AS geom,
     example_id,
     line.name AS name,
 
@@ -455,12 +457,13 @@ FROM (
 
              COUNT(*) AS number_of_rides,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY length DESC) AS median_length,
-             MIN(id) AS example_id,
+             MIN(base.id) AS example_id,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY speed DESC) AS median_speed,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY duration DESC) AS median_duration,
              MAX(waiting_time) AS max_waiting_time,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS median_waiting_time
          FROM intersection_edge edge
+         JOIN intersection_base base ON edge.id = base.id
          GROUP BY GROUPING SETS (
              (osm_id, prev_osm_id, next_osm_id),
              (osm_id, prev_osm_id, next_osm_id, year),
@@ -473,6 +476,7 @@ FROM (
              )
      ) agg
          JOIN intersection_edge example ON example.id = agg.example_id
+         JOIN intersection_base example_base ON example.id = example_base.id
          LEFT JOIN planet_osm_line line ON line.osm_id = example.osm_id
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
@@ -489,7 +493,7 @@ SELECT
     agg.traffic_time,
     agg.year,
 
-    example.geom AS geom,
+    example_base.geom AS geom,
     example_id,
     example.traffic_signal_cluster_id,
     sl.name AS start_name,
@@ -512,12 +516,13 @@ FROM (
 
              COUNT(*) AS number_of_rides,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY length DESC) AS median_length,
-             MIN(node.id) AS example_id,
+             MIN(base.id) AS example_id,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY speed DESC) AS median_speed,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY duration DESC) AS median_duration,
              MAX(waiting_time) AS max_waiting_time,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS median_waiting_time
          FROM intersection_node node
+         JOIN intersection_base base ON node.id = base.id
          GROUP BY GROUPING SETS (
              (start_osm_id, end_osm_id),
              (start_osm_id, end_osm_id, year),
@@ -530,6 +535,7 @@ FROM (
              )
      ) agg
          JOIN intersection_node example ON example.id = agg.example_id
+         JOIN intersection_base example_base ON example.id = example_base.id
          LEFT JOIN planet_osm_line sl ON sl.osm_id = example.start_osm_id
          LEFT JOIN planet_osm_line el ON el.osm_id = example.end_osm_id
 ;
@@ -540,49 +546,51 @@ CREATE UNIQUE INDEX IF NOT EXISTS intersection_node_metrics_pk
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS
 WITH edges AS (
     SELECT
-        er.region_id,
+        ir.region_id,
         COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
         COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_edges,
-        COUNT(DISTINCT edge.ride_id)                                   AS number_of_rides,
+        COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
         SUM(length) / 1000                                             AS edge_length_km,
         SUM(waiting_time)                                              AS edge_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
     FROM intersection_edge edge
-    JOIN intersection_edge__region er ON edge.id = er.edge_id
+    JOIN intersection_base base ON edge.id = base.id
+    JOIN intersection__region ir ON base.id = ir.intersection_id
     GROUP BY GROUPING SETS (
-        (er.region_id),
-        (er.region_id, year),
-        (er.region_id, traffic_time),
-        (er.region_id, traffic_time, year),
-        (er.region_id, week_day),
-        (er.region_id, week_day, year),
-        (er.region_id, week_day, traffic_time),
-        (er.region_id, week_day, traffic_time, year)
+        (ir.region_id),
+        (ir.region_id, year),
+        (ir.region_id, traffic_time),
+        (ir.region_id, traffic_time, year),
+        (ir.region_id, week_day),
+        (ir.region_id, week_day, year),
+        (ir.region_id, week_day, traffic_time),
+        (ir.region_id, week_day, traffic_time, year)
     )
 ), nodes AS (
     SELECT
-        nr.region_id,
+        ir.region_id,
         COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
         COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_nodes,
-        COUNT(DISTINCT node.ride_id)                                   AS number_of_rides,
+        COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
         SUM(length) / 1000                                             AS node_length_km,
         SUM(waiting_time)                                              AS node_waiting_time,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
     FROM intersection_node node
-    JOIN intersection_node__region nr ON node.id = nr.node_id
+    JOIN intersection_base base ON node.id = base.id
+    JOIN intersection__region ir ON base.id = ir.intersection_id
     GROUP BY GROUPING SETS (
-        (nr.region_id),
-        (nr.region_id, year),
-        (nr.region_id, traffic_time),
-        (nr.region_id, traffic_time, year),
-        (nr.region_id, week_day),
-        (nr.region_id, week_day, year),
-        (nr.region_id, week_day, traffic_time),
-        (nr.region_id, week_day, traffic_time, year)
+        (ir.region_id),
+        (ir.region_id, year),
+        (ir.region_id, traffic_time),
+        (ir.region_id, traffic_time, year),
+        (ir.region_id, week_day),
+        (ir.region_id, week_day, year),
+        (ir.region_id, week_day, traffic_time),
+        (ir.region_id, week_day, traffic_time, year)
     )
 )
 SELECT

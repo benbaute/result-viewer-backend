@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.repositories;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.entities.SafetyMetricsRegion;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
@@ -48,6 +49,7 @@ public interface SafetyMetricsRegionRepository
 			""")
 	List<SafetyMetricRegionDTO> getFilteredSafetyMetrics(TrafficTimes trafficTime, WeekDays weekDay, int year);
 
+    @LogExecutionTimeSubTask
     @Modifying
     @Transactional
     @Query(value = """

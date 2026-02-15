@@ -13,8 +13,9 @@ import java.util.*;
 
 @Getter
 @Setter
-@MappedSuperclass
-public abstract class IntersectionBaseClass extends TimeBaseClass {
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class IntersectionBase extends TimeBaseClass {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,21 +34,32 @@ public abstract class IntersectionBaseClass extends TimeBaseClass {
     @Temporal(TemporalType.TIMESTAMP)
     private Date endTime;
 
+    @Column
     private double speed; // km/h
 
+    @Column
     private double duration; // s
 
+    @Column
     private double length; // m
 
     @Column
     private Double waitingTime; // s
+
+    @ManyToMany
+    @JoinTable(
+            name = "intersection__region",
+            joinColumns = @JoinColumn(name = "intersection_id"),
+            inverseJoinColumns = @JoinColumn(name = "region_id")
+    )
+    private Set<Region> regions = new HashSet<>();
 
     // For calculating region
     @Transient
     private Point startPoint;
 
 
-	public IntersectionBaseClass() {
+	public IntersectionBase() {
 	}
 
 
@@ -81,6 +93,4 @@ public abstract class IntersectionBaseClass extends TimeBaseClass {
         properties.put("trafficTime", this.getTrafficTime());
         return properties;
     }
-
-    public abstract Set<Region> getRegions();
 }

@@ -627,7 +627,7 @@ public class RideService {
         }
     }
 
-    private void applyIntersectionProperties(List<MatchedPoint> intersection, IntersectionBaseClass element, Ride ride) {
+    private void applyIntersectionProperties(List<MatchedPoint> intersection, IntersectionBase element, Ride ride) {
         Date endTime = intersection.getLast().getTimestamp();
         Date startTime = intersection.getFirst().getTimestamp();
         element.setEndTime(endTime);
@@ -693,7 +693,7 @@ public class RideService {
         ridePointRepository.saveAll(ridePointList);
     }
 
-    public void setContainingRegions(List<? extends IntersectionBaseClass> intersections) {
+    public void setContainingRegions(List<? extends IntersectionBase> intersections) {
         int number_of_elements = intersections.size();
         if (number_of_elements > 0) {
             Long[] ids = new Long[number_of_elements];
@@ -701,7 +701,7 @@ public class RideService {
             Double[] lats = new Double[number_of_elements];
 
             for (int i = 0; i < number_of_elements; i++) {
-                IntersectionBaseClass inc = intersections.get(i);
+                IntersectionBase inc = intersections.get(i);
                 ids[i] = (long) i;
                 lngs[i] = inc.getStartPoint().getX();
                 lats[i] = inc.getStartPoint().getY();

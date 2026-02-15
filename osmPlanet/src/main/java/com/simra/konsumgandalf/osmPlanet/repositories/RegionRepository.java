@@ -1,7 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.repositories;
 
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
-import com.simra.konsumgandalf.common.models.dtos.RegionAggregate;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +15,7 @@ import java.util.Optional;
 
 public interface RegionRepository extends JpaRepository<Region, Long> {
 
-    @Query("SELECT r FROM Region r WHERE r.name = :name AND r.adminLevel IN (4, 6) ORDER BY r.adminLevel ASC")
+    @Query("SELECT r FROM Region r WHERE r.name = :name ORDER BY r.adminLevel ASC")
 	List<Region> findByName(String name);
 
 	@Query("SELECT r.way FROM Region r WHERE r.name = :name")
@@ -124,13 +123,6 @@ CROSS JOIN LATERAL (
     void saveRegions();
 
 
-    @Query(
-            name = "Region.aggregateRegions",
-            nativeQuery = true
-    )
-    List<RegionAggregate> aggregateIntersectionDataPerRegion(
-            @Param("region") String region
-    );
 
     @Query(value="""
 SELECT * FROM Region WHERE (:name IS NULL OR :name = name)

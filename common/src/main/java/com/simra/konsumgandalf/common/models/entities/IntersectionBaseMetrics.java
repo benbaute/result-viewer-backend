@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Getter
 @MappedSuperclass
-public abstract class IntersectionBaseClassMetrics extends TimeBaseClass {
+public abstract class IntersectionBaseMetrics extends TimeBaseClass {
 
     @Id
     private Long id;

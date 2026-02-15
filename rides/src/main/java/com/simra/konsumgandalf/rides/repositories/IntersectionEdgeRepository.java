@@ -1,7 +1,6 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 
-import com.simra.konsumgandalf.common.models.dtos.IntersectionEdgeAggregate;
 import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,11 +12,6 @@ import java.util.List;
 public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEdge, Long> {
     List<IntersectionEdge> findByRideId(Long rideId);
 
-    @Query(
-            name = "IntersectionEdge.aggregateEdges",
-            nativeQuery = true
-    )
-    List<IntersectionEdgeAggregate> aggregateEdges(Long count, String region, String name);
 
     @Query(value = """
     SELECT DISTINCT e.ride.id
@@ -55,9 +49,10 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
                 :region IS NULL
                 OR EXISTS (
                     SELECT 1
-                    FROM intersection_edge__region er
-                    JOIN region r ON r.id = er.region_id
-                    WHERE er.edge_id = edge.id
+                    FROM intersection_base base
+                    JOIN intersection__region ir ON base.id = ir.intersection_id
+                    JOIN region r ON r.id = ir.region_id
+                    WHERE base.id = edge.id
                     AND r.name = :region
                 )
             )

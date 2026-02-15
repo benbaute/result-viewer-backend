@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.osmPlanet.repositories;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.entities.SafetyMetricsSimraRegion;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
@@ -54,6 +55,7 @@ public interface SafetyMetricsSimraRegionRepository
 			""")
 	List<RideEntityMetricsDTO> findNumberOfRidesAndLengthAll();
 
+    @LogExecutionTimeSubTask
     @Modifying
     @Transactional
     @Query(value = """
