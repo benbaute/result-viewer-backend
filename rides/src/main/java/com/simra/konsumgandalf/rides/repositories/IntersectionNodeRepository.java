@@ -14,17 +14,16 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
 
     @Query(
             value = """
-    SELECT *
-    FROM intersection_node
-    WHERE :trafficSignalClusterId = traffic_signal_cluster_id
+    SELECT node
+    FROM IntersectionNode node
+    WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
         AND
-            ((:startOsmId IS NULL AND start_osm_id IS NULL) OR
-            (:startOsmId IS NOT NULL AND start_osm_id = :startOsmId))
+            ((:startOsmId IS NULL AND node.startLine IS NULL) OR
+            (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
         AND
-            ((:endOsmId IS NULL AND end_osm_id IS NULL) OR
-            (:endOsmId IS NOT NULL AND end_osm_id = :endOsmId))
-    """,
-            nativeQuery = true
+            ((:endOsmId IS NULL AND node.endLine IS NULL) OR
+            (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
+    """
     )
     List<IntersectionNode> findByClusterIdStartEndOsmId(Long trafficSignalClusterId, Long startOsmId, Long endOsmId);
 

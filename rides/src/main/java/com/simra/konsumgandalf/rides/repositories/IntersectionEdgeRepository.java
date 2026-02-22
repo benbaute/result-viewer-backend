@@ -22,18 +22,17 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
 
     @Query(
             value = """
-    SELECT *
-    FROM intersection_edge
-    WHERE ((:prevOsmId IS NULL AND prev_osm_id IS NULL) OR
-            (:prevOsmId IS NOT NULL AND prev_osm_id = :prevOsmId))
+    SELECT edge
+    FROM IntersectionEdge edge
+    WHERE ((:prevOsmId IS NULL AND edge.prevLine IS NULL) OR
+            (:prevOsmId IS NOT NULL AND edge.prevLine.id = :prevOsmId))
         AND
-            ((:osmId IS NULL AND osm_id IS NULL) OR
-            (:osmId IS NOT NULL AND osm_id = :osmId))
+            ((:osmId IS NULL AND edge.line IS NULL) OR
+            (:osmId IS NOT NULL AND edge.line.id = :osmId))
         AND
-            ((:nextOsmId IS NULL AND next_osm_id IS NULL) OR
-            (:nextOsmId IS NOT NULL AND next_osm_id = :nextOsmId))
-    """,
-            nativeQuery = true
+            ((:nextOsmId IS NULL AND edge.nextLine IS NULL) OR
+            (:nextOsmId IS NOT NULL AND edge.nextLine.id = :nextOsmId))
+    """
     )
     List<IntersectionEdge> findByPrevIdOsmIdNext(Long prevOsmId, Long osmId, Long nextOsmId);
 

@@ -35,11 +35,14 @@ public class MatchedPoint implements FeatureMappable {
     @JoinColumn(name = "osm_id")
     private PlanetOsmLine line;
 
+    @OneToOne
+    @JoinColumn(name = "ride_point_id")
+    private RidePoint ridePoint;
+
+    @ManyToMany(mappedBy = "matchedPoints", fetch = FetchType.LAZY)
+    private List<IntersectionBase> intersections;
+
     private boolean inIntersection;
-
-    private int edgeId;
-
-    private int pointInEdgeId;
 
     private Double distanceFromTracePoint;
 
@@ -48,12 +51,14 @@ public class MatchedPoint implements FeatureMappable {
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
+    private double accuracy;
+
 	// --- Data, not saved ---
     @Transient
     private Long osmId;
 
 	@Transient
-	private String type;
+	private String matchingResult;
 
 	@Transient
 	private Integer edgeIndex;
@@ -85,10 +90,14 @@ public class MatchedPoint implements FeatureMappable {
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();
+        properties.put("id", getId());
+        properties.put("ridePointId", this.getRidePoint().getId());
+        if (intersections != null && intersections.size() == 1) {
+            properties.put("intersectionId",  intersections.getFirst().getId());
+        }
         properties.put("rideId", this.ride.getId());
         properties.put("timestamp", this.getTimestamp());
-        properties.put("edgeId", this.getEdgeId());
-        properties.put("pointInEdgeId", this.getPointInEdgeId());
+        properties.put("accuracy", this.getAccuracy());
         properties.put("wayId", this.getLine() != null ? this.getLine().getId() : "null");
         properties.put("inIntersection", this.getInIntersection());
         properties.put("distanceFromTracePoint", this.getDistanceFromTracePoint());

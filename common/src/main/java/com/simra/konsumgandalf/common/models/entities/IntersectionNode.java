@@ -15,6 +15,7 @@ import java.util.Map;
 @Setter
 @Entity
 public class IntersectionNode extends IntersectionBase implements FeatureMappable {
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "start_osm_id")
     private PlanetOsmLine startLine;

@@ -26,9 +26,11 @@ public class ValhallaMapMatchingService extends ValhallaService {
         "costing", "bicycle",
         "shape_match", "map_snap",
         "snap_prevention", List.of("motorway", "trunk"),
+        "use_timestamps", true,
         "trace_options", Map.of(
             "turn_penalty_factor", 300,
-            "search_radius", 25,
+            "search_radius", 40,
+            "gps_accuracy", 10,
             "breakage_distance", 50,
             "interpolation_distance", 10
         )
@@ -84,8 +86,6 @@ public class ValhallaMapMatchingService extends ValhallaService {
 	private TraceResponse doRequest(List<MatchInformation> coordinates) {
 		Map<String, Object> payload = new HashMap<>(BASE_PAYLOAD);
 		payload.put("shape", coordinates);
-		payload.put("begin_time", coordinates.getFirst().getTimestamp());
-		payload.put("use_timestamps", true);
 
         TraceResponse traceResponse = webClient.post()
             .uri("/trace_attributes")

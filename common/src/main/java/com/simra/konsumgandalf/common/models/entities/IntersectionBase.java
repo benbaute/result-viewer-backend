@@ -1,6 +1,7 @@
 package com.simra.konsumgandalf.common.models.entities;
 
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import com.simra.konsumgandalf.common.models.maps.TrafficTimesMapper;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,10 +16,10 @@ import java.util.*;
 @Setter
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class IntersectionBase extends TimeBaseClass {
+public abstract class IntersectionBase extends TimeBaseClass implements FeatureMappable {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -45,6 +46,25 @@ public abstract class IntersectionBase extends TimeBaseClass {
 
     @Column
     private Double waitingTime; // s
+
+    @OneToOne
+    @JoinColumn(name = "prev_intersection_id")
+    private IntersectionBase prevIntersection;
+
+
+    @OneToOne(mappedBy = "prevIntersection")
+    private IntersectionBase nextIntersection;
+
+    @Transient
+    private Integer indexInRide;
+
+    @ManyToMany
+    @JoinTable(
+            name = "intersection__matched_points",
+            joinColumns = @JoinColumn(name = "intersection_id"),
+            inverseJoinColumns = @JoinColumn(name = "matched_point_id")
+    )
+    private List<MatchedPoint> matchedPoints = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
@@ -80,6 +100,12 @@ public abstract class IntersectionBase extends TimeBaseClass {
 
     public Map<String, Object> getBaseProperties() {
         Map<String, Object> properties = new HashMap<>();
+        if (nextIntersection != null) {
+            properties.put("nextIntersectionId", nextIntersection.getId());
+        }
+        if (prevIntersection != null) {
+            properties.put("prevIntersectionId", prevIntersection.getId());
+        }
         properties.put("id", getId());
         properties.put("startTime", this.getStartTime());
         properties.put("endTime", this.getEndTime());

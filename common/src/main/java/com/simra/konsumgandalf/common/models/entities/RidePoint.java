@@ -31,12 +31,14 @@ public class RidePoint implements FeatureMappable {
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
+
 	public RidePoint() {
 	}
 
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();
+        properties.put("id", id);
         properties.put("timestamp", this.getTimestamp());
         properties.put("path", this.getRide().getPath());
         properties.put("rideId", this.ride.getId());

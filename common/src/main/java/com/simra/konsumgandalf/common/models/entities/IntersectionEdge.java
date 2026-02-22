@@ -27,7 +27,6 @@ public class IntersectionEdge extends IntersectionBase implements FeatureMappabl
     @JoinColumn(name = "prev_osm_id")
     private PlanetOsmLine prevLine;
 
-
 	public IntersectionEdge() {
 	}
 

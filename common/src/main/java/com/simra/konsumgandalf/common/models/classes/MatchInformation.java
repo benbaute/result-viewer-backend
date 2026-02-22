@@ -1,34 +1,33 @@
 package com.simra.konsumgandalf.common.models.classes;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 
 /**
  * This class is used to store the information of the matched point from the OSRM service
  */
+@Setter
+@Getter
 public class MatchInformation extends Coordinate implements Serializable {
 
-	/**
-	 * The timestamp of the matched point
-	 */
 	@JsonProperty("time")
-	private long timestamp;
+	private long timestamp; // in seconds
 
-	public MatchInformation(double lng, double lat, long time) {
+    private double accuracy;
+
+    @JsonIgnore
+    private Long ridePointId;
+
+	public MatchInformation(double lng, double lat, long time, double accuracy) {
 		super(lng, lat);
 		this.timestamp = time;
+        this.accuracy = accuracy;
 	}
 
 	public MatchInformation() {
 	}
-
-	public long getTimestamp() {
-		return timestamp;
-	}
-
-	public void setTimestamp(long timestamp) {
-		this.timestamp = timestamp;
-	}
-
 }
