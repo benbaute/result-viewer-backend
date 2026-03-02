@@ -39,6 +39,10 @@ public class GeoService {
         );
     }
 
+    public static List<Map<String, Object>> getPropertiesCollection(List<? extends FeatureMappable> elements) {
+        return elements.stream().map(FeatureMappable::getProperties).toList();
+    }
+
     public double calculateAverage(List<Double> values) {
         double sum = 0.0;
         for (Double value : values) {

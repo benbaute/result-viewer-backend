@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -40,8 +41,30 @@ public class RideController {
 
     @GetMapping("/intersection_base")
     public ResponseEntity<Map<String, Object>> getIntersectionBaseAsGeoJson(
-            @RequestParam Long id) {
-        return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.findIntersectionGroupById(id)));
+            @RequestParam Long id,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Long startDate,
+            @RequestParam(required = false) Long endDate
+    ) {
+        return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionBase(
+                id, trafficTime, weekDay, year,
+                startDate != null ? new Date(startDate) : null, endDate != null ? new Date(endDate) : null)));
+    }
+
+    @GetMapping("/intersection_base/properties")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionBaseProperties(
+            @RequestParam Long id,
+            @RequestParam(required = false) WeekDays weekDay,
+            @RequestParam(required = false) TrafficTimes trafficTime,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Long startDate,
+            @RequestParam(required = false) Long endDate
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionBase(
+                id, trafficTime, weekDay, year,
+                startDate != null ? new Date(startDate) : null, endDate != null ? new Date(endDate) : null)));
     }
 
     @GetMapping("/intersection_base/matched_points")

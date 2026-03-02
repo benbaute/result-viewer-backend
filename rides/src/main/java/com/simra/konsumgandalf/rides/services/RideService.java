@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -160,24 +161,14 @@ public class RideService {
     }
 
 
-    public List<? extends IntersectionBase> findIntersectionGroupById(Long id) {
-        return intersectionBaseRepository.findById(id).map(this::fetchGroup).orElseGet(Collections::emptyList);
-    }
-
-    private List<? extends IntersectionBase> fetchGroup(IntersectionBase base) {
-        return switch (base) {
-            case IntersectionEdge edge -> intersectionEdgeRepository.findByPrevIdOsmIdNext(
-                    edge.getPrevLine() != null ? edge.getPrevLine().getId() : null,
-                    edge.getLine() != null ? edge.getLine().getId() : null,
-                    edge.getNextLine() != null ? edge.getNextLine().getId() : null
-            );
-            case IntersectionNode node -> intersectionNodeRepository.findByClusterIdStartEndOsmId(
-                    node.getTrafficSignalCluster().getId(),
-                    node.getStartLine() != null ? node.getStartLine().getId() : null,
-                    node.getEndLine() != null ? node.getEndLine().getId() : null
-            );
-            default -> Collections.emptyList();
-        };
+    public List<? extends IntersectionBase> getIntersectionBase(
+            Long id, TrafficTimes trafficTime, WeekDays weekDay, Integer year, Date startDate, Date endDate) {
+        if (startDate != null && endDate != null) {
+            return intersectionBaseRepository.getIntersectionBaseStartEnd(id, startDate, endDate);
+        } else if (trafficTime != null && weekDay != null && year != null) {
+            return intersectionBaseRepository.getIntersectionBaseAggregateDate(id, trafficTime, weekDay, year);
+        }
+        return Collections.emptyList();
     }
 
     public List<MatchedPoint> getMatchedPointsByBaseId(Long id) {
