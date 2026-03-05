@@ -486,6 +486,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_node_metrics AS
 SELECT
     row_number() OVER () AS id, -- primary key for hibernate
+    agg.traffic_signal_cluster_id,
     agg.start_osm_id,
     agg.end_osm_id,
 
@@ -495,7 +496,6 @@ SELECT
 
     example_base.geom AS geom,
     example_id,
-    example.traffic_signal_cluster_id,
     sl.name AS start_name,
     el.name AS end_name,
     example.street_names,
@@ -508,6 +508,7 @@ SELECT
     agg.median_waiting_time
 FROM (
          SELECT
+             traffic_signal_cluster_id,
              start_osm_id,
              end_osm_id,
              COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
@@ -524,14 +525,14 @@ FROM (
          FROM intersection_node node
          JOIN intersection_base base ON node.id = base.id
          GROUP BY GROUPING SETS (
-             (start_osm_id, end_osm_id),
-             (start_osm_id, end_osm_id, year),
-             (start_osm_id, end_osm_id, traffic_time),
-             (start_osm_id, end_osm_id, traffic_time, year),
-             (start_osm_id, end_osm_id, week_day),
-             (start_osm_id, end_osm_id, week_day, year),
-             (start_osm_id, end_osm_id, week_day, traffic_time),
-             (start_osm_id, end_osm_id, week_day, traffic_time, year)
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, year),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, traffic_time),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, traffic_time, year),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, year),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time),
+             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time, year)
              )
      ) agg
          JOIN intersection_node example ON example.id = agg.example_id
@@ -540,7 +541,7 @@ FROM (
          LEFT JOIN planet_osm_line el ON el.osm_id = example.end_osm_id
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_node_metrics_pk
-    ON intersection_node_metrics (start_osm_id, end_osm_id, week_day, traffic_time, year);
+    ON intersection_node_metrics (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time, year);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS

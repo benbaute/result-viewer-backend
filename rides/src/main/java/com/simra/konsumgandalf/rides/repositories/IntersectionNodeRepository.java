@@ -2,10 +2,14 @@ package com.simra.konsumgandalf.rides.repositories;
 
 
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
+import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
+import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -26,6 +30,38 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
     """
     )
     List<IntersectionNode> findByClusterIdStartEndOsmId(Long trafficSignalClusterId, Long startOsmId, Long endOsmId);
+
+    @Query(value = """
+SELECT node
+FROM IntersectionNode node
+WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
+AND ((:startOsmId IS NULL AND node.startLine IS NULL) OR (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
+AND ((:endOsmId IS NULL AND node.endLine IS NULL) OR (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
+AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
+AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
+AND (:year = 2000 OR node.year = :year)
+""") List<IntersectionNode> findByClusterIdStartEndOsmId(
+            @Param("trafficSignalClusterId") Long trafficSignalClusterId,
+            @Param("startOsmId") Long startOsmId,
+            @Param("endOsmId") Long endOsmId,
+            @Param("trafficTime") TrafficTimes trafficTime,
+            @Param("weekDay") WeekDays weekDay,
+            @Param("year") Integer year);
+
+    @Query(value = """
+SELECT node
+FROM IntersectionNode node
+WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
+AND ((:startOsmId IS NULL AND node.startLine IS NULL) OR (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
+AND ((:endOsmId IS NULL AND node.endLine IS NULL) OR (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
+AND node.startTime >= :startDate
+AND node.endTime <= :endDate
+""") List<IntersectionNode> findByClusterIdStartEndOsmId(
+            @Param("trafficSignalClusterId") Long trafficSignalClusterId,
+            @Param("startOsmId") Long startOsmId,
+            @Param("endOsmId") Long endOsmId,
+            @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
 
     @Query(value = """
     SELECT DISTINCT node.street_names

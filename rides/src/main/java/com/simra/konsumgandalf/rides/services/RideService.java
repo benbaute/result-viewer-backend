@@ -163,12 +163,38 @@ public class RideService {
 
     public List<? extends IntersectionBase> getIntersectionBase(
             Long id, TrafficTimes trafficTime, WeekDays weekDay, Integer year, Date startDate, Date endDate) {
-        if (startDate != null && endDate != null) {
-            return intersectionBaseRepository.getIntersectionBaseStartEnd(id, startDate, endDate);
-        } else if (trafficTime != null && weekDay != null && year != null) {
-            return intersectionBaseRepository.getIntersectionBaseAggregateDate(id, trafficTime, weekDay, year);
+        return intersectionBaseRepository.findById(id).map(b ->
+                fetchGroup(b, trafficTime, weekDay, year, startDate, endDate)).orElseGet(Collections::emptyList);
+    }
+
+    private List<? extends IntersectionBase> fetchGroup(IntersectionBase base, TrafficTimes trafficTime, WeekDays weekDay, Integer year, Date startDate, Date endDate) {
+        switch (base) {
+            case IntersectionEdge edge -> {
+                Long prevId = edge.getPrevLine() != null ? edge.getPrevLine().getId() : null;
+                Long id = edge.getLine() != null ? edge.getLine().getId() : null;
+                Long next = edge.getNextLine() != null ? edge.getNextLine().getId() : null;
+                if (startDate != null && endDate != null) {
+                    return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevId, id, next, startDate, endDate);
+                } else if (trafficTime != null && weekDay != null && year != null) {
+                    return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevId, id, next, trafficTime, weekDay, year);
+                }
+                return Collections.emptyList();
+            }
+            case IntersectionNode node -> {
+                Long signalId = node.getTrafficSignalCluster().getId();
+                Long startId = node.getStartLine() != null ? node.getStartLine().getId() : null;
+                Long endId = node.getEndLine() != null ? node.getEndLine().getId() : null;
+                if (startDate != null && endDate != null) {
+                    return intersectionNodeRepository.findByClusterIdStartEndOsmId(signalId, startId, endId, startDate, endDate);
+                } else if (trafficTime != null && weekDay != null && year != null) {
+                    return intersectionNodeRepository.findByClusterIdStartEndOsmId(signalId, startId, endId, trafficTime, weekDay, year);
+                }
+                return Collections.emptyList();
+            }
+            default -> {
+                return Collections.emptyList();
+            }
         }
-        return Collections.emptyList();
     }
 
     public List<MatchedPoint> getMatchedPointsByBaseId(Long id) {
