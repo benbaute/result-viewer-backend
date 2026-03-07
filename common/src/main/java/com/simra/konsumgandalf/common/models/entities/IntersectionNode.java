@@ -16,13 +16,16 @@ import java.util.Map;
 @Entity
 public class IntersectionNode extends IntersectionBase implements FeatureMappable {
 
+    private Long startValhallaEdgeId;
+    private Long endValhallaEdgeId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "start_osm_id")
-    private PlanetOsmLine startLine;
+    private PlanetOsmLine startOsmLine;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "end_osm_id")
-    private PlanetOsmLine endLine;
+    private PlanetOsmLine endOsmLine;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "traffic_signal_cluster_id")
@@ -37,14 +40,14 @@ public class IntersectionNode extends IntersectionBase implements FeatureMappabl
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = this.getBaseProperties();
-        PlanetOsmLine startLine = this.getStartLine();
-        PlanetOsmLine endLine = this.getEndLine();
-        properties.put("startOsmId", startLine != null ? startLine.getId() : null);
-        properties.put("endOsmId", endLine != null ? endLine.getId() : null);
-        properties.put("startName", startLine != null ? startLine.getName() : null);
-        properties.put("endName", endLine != null ? endLine.getName() : null);
-        properties.put("streetNames", this.getStreetNames());
-        properties.put("trafficSignalClusterId", this.trafficSignalCluster.getId());
+        properties.put("startValhallaEdgeId", startValhallaEdgeId);
+        properties.put("endValhallaEdgeId", endValhallaEdgeId);
+        properties.put("startOsmId", startOsmLine != null ? startOsmLine.getId() : null);
+        properties.put("endOsmId", endOsmLine != null ? endOsmLine.getId() : null);
+        properties.put("startName", startOsmLine != null ? startOsmLine.getName() : null);
+        properties.put("endName", endOsmLine != null ? endOsmLine.getName() : null);
+        properties.put("streetNames", streetNames);
+        properties.put("trafficSignalClusterId", trafficSignalCluster.getId());
         return properties;
     }
 }

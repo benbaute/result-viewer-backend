@@ -428,9 +428,9 @@ CREATE INDEX IF NOT EXISTS safety_metrics__simra_region_id
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_edge_metrics AS
 SELECT
     row_number() OVER () AS id, -- primary key for hibernate
-    agg.osm_id,
-    agg.prev_osm_id,
-    agg.next_osm_id,
+    agg.valhalla_edge_id,
+    agg.prev_valhalla_edge_id,
+    agg.next_valhalla_edge_id,
 
     agg.week_day,
     agg.traffic_time,
@@ -440,6 +440,10 @@ SELECT
     example_id,
     line.name AS name,
 
+    example.osm_id,
+    example.prev_osm_id,
+    example.next_osm_id,
+
     agg.number_of_rides,
     agg.median_length,
     agg.median_duration,
@@ -448,9 +452,9 @@ SELECT
     agg.median_waiting_time
 FROM (
          SELECT
-             osm_id,
-             prev_osm_id,
-             next_osm_id,
+             valhalla_edge_id,
+             prev_valhalla_edge_id,
+             next_valhalla_edge_id,
              COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
              COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
              COALESCE(year, 2000)                AS year,         -- aggregation number for years
@@ -465,14 +469,14 @@ FROM (
          FROM intersection_edge edge
          JOIN intersection_base base ON edge.id = base.id
          GROUP BY GROUPING SETS (
-             (osm_id, prev_osm_id, next_osm_id),
-             (osm_id, prev_osm_id, next_osm_id, year),
-             (osm_id, prev_osm_id, next_osm_id, traffic_time),
-             (osm_id, prev_osm_id, next_osm_id, traffic_time, year),
-             (osm_id, prev_osm_id, next_osm_id, week_day),
-             (osm_id, prev_osm_id, next_osm_id, week_day, year),
-             (osm_id, prev_osm_id, next_osm_id, week_day, traffic_time),
-             (osm_id, prev_osm_id, next_osm_id, week_day, traffic_time, year)
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, year),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, traffic_time),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, traffic_time, year),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, year),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time),
+             (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time, year)
              )
      ) agg
          JOIN intersection_edge example ON example.id = agg.example_id
@@ -480,15 +484,15 @@ FROM (
          LEFT JOIN planet_osm_line line ON line.osm_id = example.osm_id
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
-    ON intersection_edge_metrics (osm_id, prev_osm_id, next_osm_id, week_day, traffic_time, year);
+    ON intersection_edge_metrics (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time, year);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_node_metrics AS
 SELECT
     row_number() OVER () AS id, -- primary key for hibernate
     agg.traffic_signal_cluster_id,
-    agg.start_osm_id,
-    agg.end_osm_id,
+    agg.start_valhalla_edge_id,
+    agg.end_valhalla_edge_id,
 
     agg.week_day,
     agg.traffic_time,
@@ -500,6 +504,9 @@ SELECT
     el.name AS end_name,
     example.street_names,
 
+    example.start_osm_id,
+    example.end_osm_id,
+
     agg.number_of_rides,
     agg.median_length,
     agg.median_duration,
@@ -509,8 +516,8 @@ SELECT
 FROM (
          SELECT
              traffic_signal_cluster_id,
-             start_osm_id,
-             end_osm_id,
+             start_valhalla_edge_id,
+             end_valhalla_edge_id,
              COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
              COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
              COALESCE(year, 2000)                AS year,         -- aggregation number for years
@@ -525,14 +532,14 @@ FROM (
          FROM intersection_node node
          JOIN intersection_base base ON node.id = base.id
          GROUP BY GROUPING SETS (
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, year),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, traffic_time),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, traffic_time, year),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, year),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time),
-             (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time, year)
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, year),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, traffic_time),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, traffic_time, year),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, year),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time),
+             (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time, year)
              )
      ) agg
          JOIN intersection_node example ON example.id = agg.example_id
@@ -541,7 +548,7 @@ FROM (
          LEFT JOIN planet_osm_line el ON el.osm_id = example.end_osm_id
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_node_metrics_pk
-    ON intersection_node_metrics (traffic_signal_cluster_id, start_osm_id, end_osm_id, week_day, traffic_time, year);
+    ON intersection_node_metrics (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time, year);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS

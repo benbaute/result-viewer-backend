@@ -16,34 +16,19 @@ import java.util.List;
 public interface IntersectionNodeRepository extends JpaRepository<IntersectionNode, Long> {
     List<IntersectionNode> findByRideId(Long rideId);
 
-    @Query(
-            value = """
-    SELECT node
-    FROM IntersectionNode node
-    WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-        AND
-            ((:startOsmId IS NULL AND node.startLine IS NULL) OR
-            (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
-        AND
-            ((:endOsmId IS NULL AND node.endLine IS NULL) OR
-            (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
-    """
-    )
-    List<IntersectionNode> findByClusterIdStartEndOsmId(Long trafficSignalClusterId, Long startOsmId, Long endOsmId);
-
     @Query(value = """
 SELECT node
 FROM IntersectionNode node
 WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-AND ((:startOsmId IS NULL AND node.startLine IS NULL) OR (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
-AND ((:endOsmId IS NULL AND node.endLine IS NULL) OR (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
+AND ((:startId IS NULL AND node.startValhallaEdgeId IS NULL) OR (:startId IS NOT NULL AND node.startValhallaEdgeId= :startId))
+AND ((:endId IS NULL AND node.endValhallaEdgeId IS NULL) OR (:endId IS NOT NULL AND node.endValhallaEdgeId = :endId))
 AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
 AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
 AND (:year = 2000 OR node.year = :year)
-""") List<IntersectionNode> findByClusterIdStartEndOsmId(
+""") List<IntersectionNode> findByClusterIdGroupValhallaEdgeId(
             @Param("trafficSignalClusterId") Long trafficSignalClusterId,
-            @Param("startOsmId") Long startOsmId,
-            @Param("endOsmId") Long endOsmId,
+            @Param("startId") Long startId,
+            @Param("endId") Long endId,
             @Param("trafficTime") TrafficTimes trafficTime,
             @Param("weekDay") WeekDays weekDay,
             @Param("year") Integer year);
@@ -52,14 +37,14 @@ AND (:year = 2000 OR node.year = :year)
 SELECT node
 FROM IntersectionNode node
 WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-AND ((:startOsmId IS NULL AND node.startLine IS NULL) OR (:startOsmId IS NOT NULL AND node.startLine.id = :startOsmId))
-AND ((:endOsmId IS NULL AND node.endLine IS NULL) OR (:endOsmId IS NOT NULL AND node.endLine.id = :endOsmId))
+AND ((:startId IS NULL AND node.startValhallaEdgeId IS NULL) OR (:startId IS NOT NULL AND node.startValhallaEdgeId= :startId))
+AND ((:endId IS NULL AND node.endValhallaEdgeId IS NULL) OR (:endId IS NOT NULL AND node.endValhallaEdgeId = :endId))
 AND node.startTime >= :startDate
 AND node.endTime <= :endDate
-""") List<IntersectionNode> findByClusterIdStartEndOsmId(
+""") List<IntersectionNode> findByClusterIdGroupValhallaEdgeId(
             @Param("trafficSignalClusterId") Long trafficSignalClusterId,
-            @Param("startOsmId") Long startOsmId,
-            @Param("endOsmId") Long endOsmId,
+            @Param("startId") Long startId,
+            @Param("endId") Long endId,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 

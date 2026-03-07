@@ -75,7 +75,11 @@ public class GeoService {
 	}
 
     public double distance(Coordinate first, Coordinate second) {
-        return distance(first.getX(), first.getY(), second.getX(), second.getY());
+        return distance(first.getY(), first.getX(), second.getY(), second.getX());
+    }
+
+    public double distance(Point first, Point second) {
+        return distance(first.getCoordinate(), second.getCoordinate());
     }
 
     public double distance(MatchInformation first, MatchInformation second) {

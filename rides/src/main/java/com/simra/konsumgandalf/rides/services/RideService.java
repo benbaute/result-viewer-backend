@@ -67,10 +67,6 @@ public class RideService {
         return intersectionEdgeRepository.findByRideId(rideId);
     }
 
-    public List<IntersectionNode> getIntersectionNodes(Long trafficSignalClusterId, Long startOsmId, Long endOsmId) {
-        return intersectionNodeRepository.findByClusterIdStartEndOsmId(trafficSignalClusterId, startOsmId, endOsmId);
-    }
-
     public List<IntersectionNodeMetrics> getIntersectionNodeMetricsComplete(
             Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
         return intersectionNodeMetricsRepository.getIntersectionNodeMetricsComplete(
@@ -96,10 +92,6 @@ public class RideService {
     public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId,
               Long count, String region, String streetNames) {
         return intersectionNodeRepository.findAllIncludingString(trafficSignalClusterId, count, region, streetNames);
-    }
-
-    public List<IntersectionEdge> getIntersectionEdge(Long prevOsmId, Long osmId, Long nextOsmId) {
-        return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevOsmId, osmId, nextOsmId);
     }
 
     public List<IntersectionEdgeMetrics> getIntersectionEdgeMetricsComplete(
@@ -170,24 +162,24 @@ public class RideService {
     private List<? extends IntersectionBase> fetchGroup(IntersectionBase base, TrafficTimes trafficTime, WeekDays weekDay, Integer year, Date startDate, Date endDate) {
         switch (base) {
             case IntersectionEdge edge -> {
-                Long prevId = edge.getPrevLine() != null ? edge.getPrevLine().getId() : null;
-                Long id = edge.getLine() != null ? edge.getLine().getId() : null;
-                Long next = edge.getNextLine() != null ? edge.getNextLine().getId() : null;
+                Long prev = edge.getPrevValhallaEdgeId();
+                Long id = edge.getValhallaEdgeId();
+                Long next = edge.getNextValhallaEdgeId();
                 if (startDate != null && endDate != null) {
-                    return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevId, id, next, startDate, endDate);
+                    return intersectionEdgeRepository.findByGroupValhallaEdgeId(prev, id, next, startDate, endDate);
                 } else if (trafficTime != null && weekDay != null && year != null) {
-                    return intersectionEdgeRepository.findByPrevIdOsmIdNext(prevId, id, next, trafficTime, weekDay, year);
+                    return intersectionEdgeRepository.findByGroupValhallaEdgeId(prev, id, next, trafficTime, weekDay, year);
                 }
                 return Collections.emptyList();
             }
             case IntersectionNode node -> {
                 Long signalId = node.getTrafficSignalCluster().getId();
-                Long startId = node.getStartLine() != null ? node.getStartLine().getId() : null;
-                Long endId = node.getEndLine() != null ? node.getEndLine().getId() : null;
+                Long startId = node.getStartValhallaEdgeId();
+                Long endId = node.getEndValhallaEdgeId();
                 if (startDate != null && endDate != null) {
-                    return intersectionNodeRepository.findByClusterIdStartEndOsmId(signalId, startId, endId, startDate, endDate);
+                    return intersectionNodeRepository.findByClusterIdGroupValhallaEdgeId(signalId, startId, endId, startDate, endDate);
                 } else if (trafficTime != null && weekDay != null && year != null) {
-                    return intersectionNodeRepository.findByClusterIdStartEndOsmId(signalId, startId, endId, trafficTime, weekDay, year);
+                    return intersectionNodeRepository.findByClusterIdGroupValhallaEdgeId(signalId, startId, endId, trafficTime, weekDay, year);
                 }
                 return Collections.emptyList();
             }

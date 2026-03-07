@@ -15,17 +15,22 @@ import java.util.Map;
 @Setter
 @Entity
 public class IntersectionEdge extends IntersectionBase implements FeatureMappable {
+
+    private Long valhallaEdgeId;
+    private Long nextValhallaEdgeId;
+    private Long prevValhallaEdgeId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "osm_id")
-    private PlanetOsmLine line;
+    private PlanetOsmLine osmLine;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "next_osm_id")
-    private PlanetOsmLine nextLine;
+    private PlanetOsmLine nextOsmLine;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "prev_osm_id")
-    private PlanetOsmLine prevLine;
+    private PlanetOsmLine prevOsmLine;
 
 	public IntersectionEdge() {
 	}
@@ -33,13 +38,13 @@ public class IntersectionEdge extends IntersectionBase implements FeatureMappabl
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = this.getBaseProperties();
-        PlanetOsmLine line = this.getLine();
-        PlanetOsmLine prevLine = this.getPrevLine();
-        PlanetOsmLine nextLine = this.getNextLine();
-        properties.put("osmId", line != null ? line.getId() : null);
-        properties.put("prevOsmId", prevLine != null ? prevLine.getId() : null);
-        properties.put("nextOsmId", nextLine != null ? nextLine.getId() : null);
-        properties.put("name", line != null ? line.getName() : null);
+        properties.put("valhallaEdgeId", valhallaEdgeId);
+        properties.put("nextValhallaEdgeId", nextValhallaEdgeId);
+        properties.put("prevValhallaEdgeId", prevValhallaEdgeId);
+        properties.put("osmId", osmLine != null ? osmLine.getId() : null);
+        properties.put("prevOsmId", prevOsmLine != null ? prevOsmLine.getId() : null);
+        properties.put("nextOsmId", nextOsmLine != null ? nextOsmLine.getId() : null);
+        properties.put("name", osmLine != null ? osmLine.getName() : null);
         return properties;
     }
 }

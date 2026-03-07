@@ -20,39 +20,23 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
     @Query(value = """
     SELECT DISTINCT e.ride.id
     FROM IntersectionEdge e
-    WHERE e.line.id = :osmLineId
+    WHERE e.osmLine.id = :osmLineId
 """)
     List<Long> findByOsmLineId(Long osmLineId);
-
-    @Query(
-            value = """
-    SELECT edge
-    FROM IntersectionEdge edge
-    WHERE ((:prevOsmId IS NULL AND edge.prevLine IS NULL) OR
-            (:prevOsmId IS NOT NULL AND edge.prevLine.id = :prevOsmId))
-        AND
-            ((:osmId IS NULL AND edge.line IS NULL) OR
-            (:osmId IS NOT NULL AND edge.line.id = :osmId))
-        AND
-            ((:nextOsmId IS NULL AND edge.nextLine IS NULL) OR
-            (:nextOsmId IS NOT NULL AND edge.nextLine.id = :nextOsmId))
-    """
-    )
-    List<IntersectionEdge> findByPrevIdOsmIdNext(Long prevOsmId, Long osmId, Long nextOsmId);
 
     @Query(value = """
 SELECT edge
 FROM IntersectionEdge edge
-WHERE ((:prevOsmId IS NULL AND edge.prevLine IS NULL) OR (:prevOsmId IS NOT NULL AND edge.prevLine.id = :prevOsmId))
-AND ((:osmId IS NULL AND edge.line IS NULL) OR (:osmId IS NOT NULL AND edge.line.id = :osmId))
-AND ((:nextOsmId IS NULL AND edge.nextLine IS NULL) OR (:nextOsmId IS NOT NULL AND edge.nextLine.id = :nextOsmId))
+WHERE ((:prev IS NULL AND edge.prevValhallaEdgeId IS NULL) OR (:prev IS NOT NULL AND edge.prevValhallaEdgeId = :prev))
+AND ((:id IS NULL AND edge.valhallaEdgeId IS NULL) OR (:id IS NOT NULL AND edge.valhallaEdgeId = :id))
+AND ((:next IS NULL AND edge.nextValhallaEdgeId IS NULL) OR (:next IS NOT NULL AND edge.nextValhallaEdgeId = :next))
 AND (:weekDay = 'ALL_WEEK' OR edge.weekDay = :weekDay)
 AND (:trafficTime = 'ALL_DAY' OR edge.trafficTime = :trafficTime)
 AND (:year = 2000 OR edge.year = :year)
-""") List<IntersectionEdge> findByPrevIdOsmIdNext(
-            @Param("prevOsmId") Long prevOsmId,
-            @Param("osmId") Long osmId,
-            @Param("nextOsmId") Long nextOsmId,
+""") List<IntersectionEdge> findByGroupValhallaEdgeId(
+            @Param("prev") Long prev,
+            @Param("id") Long id,
+            @Param("next") Long next,
             @Param("trafficTime") TrafficTimes trafficTime,
             @Param("weekDay") WeekDays weekDay,
             @Param("year") Integer year);
@@ -60,15 +44,15 @@ AND (:year = 2000 OR edge.year = :year)
     @Query(value = """
 SELECT edge
 FROM IntersectionEdge edge
-WHERE ((:prevOsmId IS NULL AND edge.prevLine IS NULL) OR (:prevOsmId IS NOT NULL AND edge.prevLine.id = :prevOsmId))
-AND ((:osmId IS NULL AND edge.line IS NULL) OR (:osmId IS NOT NULL AND edge.line.id = :osmId))
-AND ((:nextOsmId IS NULL AND edge.nextLine IS NULL) OR (:nextOsmId IS NOT NULL AND edge.nextLine.id = :nextOsmId))
+WHERE ((:prev IS NULL AND edge.prevValhallaEdgeId IS NULL) OR (:prev IS NOT NULL AND edge.prevValhallaEdgeId = :prev))
+AND ((:id IS NULL AND edge.valhallaEdgeId IS NULL) OR (:id IS NOT NULL AND edge.valhallaEdgeId = :id))
+AND ((:next IS NULL AND edge.nextValhallaEdgeId IS NULL) OR (:next IS NOT NULL AND edge.nextValhallaEdgeId = :next))
 AND edge.startTime >= :startDate
 AND edge.endTime <= :endDate
-""") List<IntersectionEdge> findByPrevIdOsmIdNext(
-            @Param("prevOsmId") Long prevOsmId,
-            @Param("osmId") Long osmId,
-            @Param("nextOsmId") Long nextOsmId,
+""") List<IntersectionEdge> findByGroupValhallaEdgeId(
+            @Param("prev") Long prev,
+            @Param("id") Long id,
+            @Param("next") Long next,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 

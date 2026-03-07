@@ -35,6 +35,10 @@ public class RidePoint implements FeatureMappable {
 	public RidePoint() {
 	}
 
+    public RidePoint(Long id) {
+        this.id = id;
+    }
+
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();

@@ -10,6 +10,8 @@ import java.util.List;
 @Getter
 @Setter
 public class Edge {
+    private Long valhallaEdgeId;
+
     private Long osmId;
 
     private PlanetOsmLine osmLine;

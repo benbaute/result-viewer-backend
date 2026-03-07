@@ -79,15 +79,6 @@ public class RideController {
         return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getRidePointsByBaseId(id)));
     }
 
-    @GetMapping("/intersection_nodes")
-    public ResponseEntity<Map<String, Object>> getIntersectionNodesAsGeoJson(
-            @RequestParam Long trafficSignalClusterId,
-            @RequestParam(required = false) Long startOsmId,
-            @RequestParam(required = false) Long endOsmId) {
-        return ResponseEntity.ok(GeoService.getFeatureCollection(
-                rideService.getIntersectionNodes(trafficSignalClusterId, startOsmId, endOsmId)));
-    }
-
     @GetMapping("/intersection_nodes/aggregate/complete")
     public ResponseEntity<Map<String, Object>> getIntersectionNodesAggregateAsGeoJsonComplete(
             @RequestParam(required = false) Long numberOfRides,
@@ -122,15 +113,6 @@ public class RideController {
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String streetNames) {
         return rideService.findAllStreetNamesIncludingStringIntersectionNode(trafficSignalClusterId, count, region, streetNames);
-    }
-
-    @GetMapping("/intersection_edges")
-    public ResponseEntity<Map<String, Object>> getIntersectionEdgesAsGeoJsonPageable(
-            @RequestParam(required = false) Long prevOsmId,
-            @RequestParam(required = false) Long osmId,
-            @RequestParam(required = false) Long nextOsmId) {
-        return ResponseEntity.ok(GeoService.getFeatureCollection(
-                rideService.getIntersectionEdge(prevOsmId, osmId, nextOsmId)));
     }
 
     @GetMapping("/intersection_edges/aggregate/complete")

@@ -1,16 +1,29 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Point;
-
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.locationtech.jts.geom.Point;
+
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.persistence.Transient;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Matched (with Valhalla) GPS point for a ride.
@@ -24,6 +37,8 @@ public class MatchedPoint implements FeatureMappable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+    private Long valhallaEdgeId;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
@@ -33,7 +48,7 @@ public class MatchedPoint implements FeatureMappable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "osm_id")
-    private PlanetOsmLine line;
+    private PlanetOsmLine osmLine;
 
     @OneToOne
     @JoinColumn(name = "ride_point_id")
@@ -54,17 +69,11 @@ public class MatchedPoint implements FeatureMappable {
     private double accuracy;
 
 	// --- Data, not saved ---
-    @Transient
-    private Long osmId;
-
 	@Transient
 	private String matchingResult;
 
 	@Transient
 	private Integer edgeIndex;
-
-    @Transient
-    Coordinate coordinate;
 
     @Transient
     private List<TrafficSignalCluster> trafficSignalClusters;
@@ -73,11 +82,22 @@ public class MatchedPoint implements FeatureMappable {
     private TrafficSignalCluster inIntersectionCluster;
 
     @Transient
-    private PlanetOsmLine prevLine;
+    private PlanetOsmLine prevOsmLine;
+    
+    @Transient
+    private PlanetOsmLine nextOsmLine;
 
     @Transient
-    private PlanetOsmLine nextLine;
+    private Long prevValhallaEdgeId;
 
+    @Transient
+    private Long nextValhallaEdgeId;
+
+    @Transient
+    private Point rawGPSLocation;
+
+    @Transient
+    private Point prevRawGPSLocation;
 
 	// --- Constructor ---
 	public MatchedPoint() {
@@ -90,18 +110,18 @@ public class MatchedPoint implements FeatureMappable {
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();
-        properties.put("id", getId());
-        properties.put("ridePointId", this.getRidePoint().getId());
+        properties.put("id", id);
+        properties.put("ridePointId", ridePoint.getId());
         if (intersections != null && intersections.size() == 1) {
             properties.put("intersectionId",  intersections.getFirst().getId());
         }
-        properties.put("rideId", this.ride.getId());
-        properties.put("timestamp", this.getTimestamp());
-        properties.put("accuracy", this.getAccuracy());
-        properties.put("wayId", this.getLine() != null ? this.getLine().getId() : "null");
-        properties.put("inIntersection", this.getInIntersection());
-        properties.put("distanceFromTracePoint", this.getDistanceFromTracePoint());
-        properties.put("stops", this.getStops());
+        properties.put("rideId", ride.getId());
+        properties.put("timestamp", timestamp);
+        properties.put("accuracy", accuracy);
+        properties.put("osmId", osmLine != null ? osmLine.getId() : null);
+        properties.put("inIntersection", inIntersection);
+        properties.put("distanceFromTracePoint", distanceFromTracePoint);
+        properties.put("stops", stops);
         return properties;
     }
 }
