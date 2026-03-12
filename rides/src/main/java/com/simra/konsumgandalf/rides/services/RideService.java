@@ -45,6 +45,9 @@ public class RideService {
     @Autowired
     private IntersectionRegionMetricsRepository intersectionRegionMetricsRepository;
 
+    @Autowired
+    private IntersectionRideRegionMetricsRepository intersectionRideRegionMetricsRepository;
+
     RideService() {}
 
 
@@ -171,6 +174,12 @@ public class RideService {
         return GeoService.getFeatureCollection(intersectionRegionMetricsRepository.findAll(spec, pageable));
     }
 
+    public List<IntersectionRideRegionMetrics> getIntersectionRideRegionMetrics(
+            Long regionId, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+        return intersectionRideRegionMetricsRepository.getIntersectionRideRegionMetrics(
+                regionId, weekDay.toString(), trafficTime.toString(), year);
+    }
+
     public Optional<IntersectionBase> getIntersectionBase(Long intersectionBaseId) {
         return intersectionBaseRepository.findById(intersectionBaseId);
     }
@@ -235,5 +244,6 @@ public class RideService {
         intersectionNodeMetricsRepository.updateIntersectionNodeMetrics();
         intersectionEdgeMetricsRepository.updateIntersectionEdgeMetrics();
         intersectionRegionMetricsRepository.updateIntersectionRegionMetrics();
+        intersectionRideRegionMetricsRepository.updateIntersectionRideRegionMetrics();
     }
 }

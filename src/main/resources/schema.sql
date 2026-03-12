@@ -635,3 +635,81 @@ AND n.year = e.year
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_region_metrics_pk
     ON intersection_region_metrics (region_id, week_day, traffic_time, year);
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_ride_region_metrics AS
+WITH edges AS (
+    SELECT
+        ir.region_id,
+        base.ride_id,
+        COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
+        COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
+        COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
+        COUNT(*)                                                       AS number_of_edges,
+        SUM(length) / 1000                                             AS edge_length_km,
+        SUM(waiting_time)                                              AS edge_waiting_time,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
+    FROM intersection_edge edge
+    JOIN intersection_base base ON edge.id = base.id
+    JOIN intersection__region ir ON base.id = ir.intersection_id
+    GROUP BY GROUPING SETS (
+        (ir.region_id, base.ride_id),
+        (ir.region_id, base.ride_id, year),
+        (ir.region_id, base.ride_id, traffic_time),
+        (ir.region_id, base.ride_id, traffic_time, year),
+        (ir.region_id, base.ride_id, week_day),
+        (ir.region_id, base.ride_id, week_day, year),
+        (ir.region_id, base.ride_id, week_day, traffic_time),
+        (ir.region_id, base.ride_id, week_day, traffic_time, year)
+        )
+), nodes AS (
+    SELECT
+        ir.region_id,
+        base.ride_id,
+        COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
+        COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
+        COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
+        COUNT(*)                                                       AS number_of_nodes,
+        SUM(length) / 1000                                             AS node_length_km,
+        SUM(waiting_time)                                              AS node_waiting_time,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
+    FROM intersection_node node
+    JOIN intersection_base base ON node.id = base.id
+    JOIN intersection__region ir ON base.id = ir.intersection_id
+    GROUP BY GROUPING SETS (
+        (ir.region_id, base.ride_id),
+        (ir.region_id, base.ride_id, year),
+        (ir.region_id, base.ride_id, traffic_time),
+        (ir.region_id, base.ride_id, traffic_time, year),
+        (ir.region_id, base.ride_id, week_day),
+        (ir.region_id, base.ride_id, week_day, year),
+        (ir.region_id, base.ride_id, week_day, traffic_time),
+        (ir.region_id, base.ride_id, week_day, traffic_time, year)
+        )
+)
+SELECT
+    row_number() OVER () AS id,
+    region.id AS region_id,
+    e.ride_id,
+    e.week_day,
+    e.traffic_time,
+    e.year,
+    way AS geom,
+    name,
+    admin_level,
+    e.number_of_edges,
+    COALESCE(n.number_of_nodes, 0) AS number_of_nodes,
+    n.node_median_waiting_time,
+    edge_length_km + COALESCE(node_length_km, 0) AS length_km,
+    COALESCE(node_waiting_time, 0) / (edge_length_km + COALESCE(node_length_km, 0)) AS node_waiting_s_per_km,
+    edge_waiting_time / (edge_length_km + COALESCE(node_length_km, 0)) AS edge_waiting_s_per_km
+FROM region
+JOIN edges e ON region.id = e.region_id  -- Full Join, only include rows with at least one edge
+LEFT JOIN nodes n ON region.id = n.region_id -- Nodes not required
+AND n.ride_id = e.ride_id
+AND n.week_day = e.week_day
+AND n.traffic_time = e.traffic_time
+AND n.year = e.year
+;
+CREATE UNIQUE INDEX IF NOT EXISTS intersection_ride_region_metrics_pk
+    ON intersection_ride_region_metrics (region_id, ride_id, week_day, traffic_time, year);

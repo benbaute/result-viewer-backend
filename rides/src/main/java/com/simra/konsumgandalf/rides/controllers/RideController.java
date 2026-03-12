@@ -239,4 +239,15 @@ public class RideController {
         return ResponseEntity.ok(rideService.getIntersectionRegionMetricsPageable(
                 regionId, adminLevel, numberOfRides, weekDay, trafficTime, year, pageable));
     }
+
+    @GetMapping("/regions/rides")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionRideRegionMetricsProperties(
+            @RequestParam Long regionId,
+            @RequestParam WeekDays weekDay,
+            @RequestParam TrafficTimes trafficTime,
+            @RequestParam Integer year
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionRideRegionMetrics(
+                regionId, weekDay, trafficTime, year)));
+    }
 }
