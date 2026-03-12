@@ -1,11 +1,10 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+import com.simra.konsumgandalf.common.models.interfaces.PropertiesMappable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.Getter;
-import org.locationtech.jts.geom.Polygon;
 
 import java.util.Map;
 
@@ -13,7 +12,7 @@ import java.util.Map;
 @Entity
 @org.hibernate.annotations.Immutable
 @org.hibernate.annotations.Subselect("select * from intersection_ride_region_metrics")
-public class IntersectionRideRegionMetrics extends TimeBaseClass implements FeatureMappable {
+public class IntersectionRideRegionMetrics extends TimeBaseClass implements PropertiesMappable {
     @Id
     private Long id;
 
@@ -22,9 +21,6 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Feat
 
     @Column(name = "ride_id")
     private Long rideId;
-
-    @Column(name="geom", columnDefinition = "geometry(Polygon,4326)")
-    private Polygon geom;
 
     @Column(name = "name")
     private String name;

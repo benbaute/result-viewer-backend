@@ -694,7 +694,6 @@ SELECT
     e.week_day,
     e.traffic_time,
     e.year,
-    way AS geom,
     name,
     admin_level,
     e.number_of_edges,

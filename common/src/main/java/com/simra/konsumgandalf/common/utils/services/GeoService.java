@@ -2,6 +2,7 @@ package com.simra.konsumgandalf.common.utils.services;
 
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+import com.simra.konsumgandalf.common.models.interfaces.PropertiesMappable;
 import org.geotools.referencing.GeodeticCalculator;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
@@ -39,8 +40,8 @@ public class GeoService {
         );
     }
 
-    public static List<Map<String, Object>> getPropertiesCollection(List<? extends FeatureMappable> elements) {
-        return elements.stream().map(FeatureMappable::getProperties).toList();
+    public static List<Map<String, Object>> getPropertiesCollection(List<? extends PropertiesMappable> elements) {
+        return elements.stream().map(PropertiesMappable::getProperties).toList();
     }
 
     public double calculateAverage(List<Double> values) {

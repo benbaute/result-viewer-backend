@@ -5,10 +5,8 @@ import org.locationtech.jts.geom.Geometry;
 import java.util.HashMap;
 import java.util.Map;
 
-public interface FeatureMappable {
+public interface FeatureMappable extends  PropertiesMappable {
     Geometry getGeom();
-
-    Map<String, Object> getProperties();
 
     default Map<String, Object> getFeatureMap() {
         Map<String, Object> feature = new HashMap<>();
