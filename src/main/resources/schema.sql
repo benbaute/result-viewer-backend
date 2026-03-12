@@ -85,6 +85,15 @@ CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signa
 CREATE INDEX IF NOT EXISTS region_geom_3857_idx ON region USING GIST (geom3857);
 
 
+CREATE INDEX IF NOT EXISTS node_traffic_signal_cluster_id ON intersection_node (traffic_signal_cluster_id);
+CREATE INDEX IF NOT EXISTS node_valhalla ON
+    intersection_node (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id);
+
+CREATE INDEX IF NOT EXISTS edge_osm_id ON intersection_edge (prev_osm_id, osm_id, next_osm_id);
+CREATE INDEX IF NOT EXISTS edge_valhalla ON
+    intersection_edge (prev_valhalla_edge_id, valhalla_edge_id, next_valhalla_edge_id);
+
+--- Custom functions
 CREATE OR REPLACE FUNCTION find_names_with_prefix(_prefix TEXT)
 RETURNS TABLE(name VARCHAR)
 LANGUAGE plpgsql

@@ -27,9 +27,9 @@ public interface IntersectionEdgeRepository extends JpaRepository<IntersectionEd
     @Query(value = """
 SELECT edge
 FROM IntersectionEdge edge
-WHERE ((:prev IS NULL AND edge.prevValhallaEdgeId IS NULL) OR (:prev IS NOT NULL AND edge.prevValhallaEdgeId = :prev))
-AND ((:id IS NULL AND edge.valhallaEdgeId IS NULL) OR (:id IS NOT NULL AND edge.valhallaEdgeId = :id))
-AND ((:next IS NULL AND edge.nextValhallaEdgeId IS NULL) OR (:next IS NOT NULL AND edge.nextValhallaEdgeId = :next))
+WHERE edge.prevValhallaEdgeId IS NOT DISTINCT FROM :prev
+AND edge.valhallaEdgeId IS NOT DISTINCT FROM :id
+AND edge.nextValhallaEdgeId IS NOT DISTINCT FROM :next
 AND (:weekDay = 'ALL_WEEK' OR edge.weekDay = :weekDay)
 AND (:trafficTime = 'ALL_DAY' OR edge.trafficTime = :trafficTime)
 AND (:year = 2000 OR edge.year = :year)
@@ -44,9 +44,9 @@ AND (:year = 2000 OR edge.year = :year)
     @Query(value = """
 SELECT edge
 FROM IntersectionEdge edge
-WHERE ((:prev IS NULL AND edge.prevValhallaEdgeId IS NULL) OR (:prev IS NOT NULL AND edge.prevValhallaEdgeId = :prev))
-AND ((:id IS NULL AND edge.valhallaEdgeId IS NULL) OR (:id IS NOT NULL AND edge.valhallaEdgeId = :id))
-AND ((:next IS NULL AND edge.nextValhallaEdgeId IS NULL) OR (:next IS NOT NULL AND edge.nextValhallaEdgeId = :next))
+WHERE edge.prevValhallaEdgeId IS NOT DISTINCT FROM :prev
+AND edge.valhallaEdgeId IS NOT DISTINCT FROM :id
+AND edge.nextValhallaEdgeId IS NOT DISTINCT FROM :next
 AND edge.startTime >= :startDate
 AND edge.endTime <= :endDate
 """) List<IntersectionEdge> findByGroupValhallaEdgeId(
@@ -55,6 +55,40 @@ AND edge.endTime <= :endDate
             @Param("next") Long next,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
+
+
+    @Query(value = """
+SELECT edge
+FROM IntersectionEdge edge
+WHERE (
+    edge.osmLine.id = :id
+    OR edge.prevIntersection.id = :id
+    OR edge.nextOsmLine.id = :id
+)
+AND (:weekDay = 'ALL_WEEK' OR edge.weekDay = :weekDay)
+AND (:trafficTime = 'ALL_DAY' OR edge.trafficTime = :trafficTime)
+AND (:year = 2000 OR edge.year = :year)
+""") List<IntersectionEdge> findAllByOsmId(
+            @Param("id") Long id,
+            @Param("trafficTime") TrafficTimes trafficTime,
+            @Param("weekDay") WeekDays weekDay,
+            @Param("year") Integer year);
+
+    @Query(value = """
+SELECT DISTINCT edge
+FROM IntersectionEdge edge
+JOIN edge.regions r
+WHERE r.id = :id
+AND (:weekDay = 'ALL_WEEK' OR edge.weekDay = :weekDay)
+AND (:trafficTime = 'ALL_DAY' OR edge.trafficTime = :trafficTime)
+AND (:year = 2000 OR edge.year = :year)
+""") List<IntersectionEdge> findAllByRegionId(
+            @Param("id") Long id,
+            @Param("trafficTime") TrafficTimes trafficTime,
+            @Param("weekDay") WeekDays weekDay,
+            @Param("year") Integer year);
+
+
 
     @Query(
             value = """

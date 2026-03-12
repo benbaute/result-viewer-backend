@@ -20,8 +20,8 @@ public interface IntersectionNodeRepository extends JpaRepository<IntersectionNo
 SELECT node
 FROM IntersectionNode node
 WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-AND ((:startId IS NULL AND node.startValhallaEdgeId IS NULL) OR (:startId IS NOT NULL AND node.startValhallaEdgeId= :startId))
-AND ((:endId IS NULL AND node.endValhallaEdgeId IS NULL) OR (:endId IS NOT NULL AND node.endValhallaEdgeId = :endId))
+AND :startId IS NOT DISTINCT FROM node.startValhallaEdgeId
+AND :endId IS NOT DISTINCT FROM node.endValhallaEdgeId
 AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
 AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
 AND (:year = 2000 OR node.year = :year)
@@ -37,8 +37,8 @@ AND (:year = 2000 OR node.year = :year)
 SELECT node
 FROM IntersectionNode node
 WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-AND ((:startId IS NULL AND node.startValhallaEdgeId IS NULL) OR (:startId IS NOT NULL AND node.startValhallaEdgeId= :startId))
-AND ((:endId IS NULL AND node.endValhallaEdgeId IS NULL) OR (:endId IS NOT NULL AND node.endValhallaEdgeId = :endId))
+AND :startId IS NOT DISTINCT FROM node.startValhallaEdgeId
+AND :endId IS NOT DISTINCT FROM node.endValhallaEdgeId
 AND node.startTime >= :startDate
 AND node.endTime <= :endDate
 """) List<IntersectionNode> findByClusterIdGroupValhallaEdgeId(
@@ -47,6 +47,34 @@ AND node.endTime <= :endDate
             @Param("endId") Long endId,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
+
+
+    @Query(value = """
+SELECT node
+FROM IntersectionNode node
+WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
+AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
+AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
+AND (:year = 2000 OR node.year = :year)
+""") List<IntersectionNode> findAllByClusterId(
+            @Param("trafficSignalClusterId") Long trafficSignalClusterId,
+            @Param("trafficTime") TrafficTimes trafficTime,
+            @Param("weekDay") WeekDays weekDay,
+            @Param("year") Integer year);
+
+    @Query(value = """
+SELECT DISTINCT node
+FROM IntersectionNode node
+JOIN node.regions r
+WHERE r.id = :id
+AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
+AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
+AND (:year = 2000 OR node.year = :year)
+""") List<IntersectionNode> findAllByRegionId(
+            @Param("id") Long id,
+            @Param("trafficTime") TrafficTimes trafficTime,
+            @Param("weekDay") WeekDays weekDay,
+            @Param("year") Integer year);
 
     @Query(value = """
     SELECT DISTINCT node.street_names

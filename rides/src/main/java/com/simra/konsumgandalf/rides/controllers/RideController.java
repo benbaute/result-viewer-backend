@@ -39,6 +39,13 @@ public class RideController {
         return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionEdge(rideId)));
     }
 
+    @GetMapping("/{intersectionBaseId}/intersection_base/properties")
+    public ResponseEntity<Map<String, Object>> getIntersectionBaseAsGeoJson(@PathVariable Long intersectionBaseId) {
+        return rideService.getIntersectionBase(intersectionBaseId).map(base ->
+                ResponseEntity.ok(base.getProperties())).orElseGet(() ->
+                ResponseEntity.ok(null));
+    }
+
     @GetMapping("/intersection_base")
     public ResponseEntity<Map<String, Object>> getIntersectionBaseAsGeoJson(
             @RequestParam Long id,
@@ -79,6 +86,28 @@ public class RideController {
         return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getRidePointsByBaseId(id)));
     }
 
+    @GetMapping("/intersection_nodes/trafficSignalClusterId/properties")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionNodePropertiesByTrafficSignalClusterId(
+            @RequestParam Long trafficSignalClusterId,
+            @RequestParam WeekDays weekDay,
+            @RequestParam TrafficTimes trafficTime,
+            @RequestParam Integer year
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionNodesByClusterId(
+                trafficSignalClusterId, trafficTime, weekDay, year)));
+    }
+
+    @GetMapping("/intersection_nodes/regionId/properties")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionNodePropertiesByRegionId(
+            @RequestParam Long regionId,
+            @RequestParam WeekDays weekDay,
+            @RequestParam TrafficTimes trafficTime,
+            @RequestParam Integer year
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionNodesByRegionId(
+                regionId, trafficTime, weekDay, year)));
+    }
+
     @GetMapping("/intersection_nodes/aggregate/complete")
     public ResponseEntity<Map<String, Object>> getIntersectionNodesAggregateAsGeoJsonComplete(
             @RequestParam(required = false) Long numberOfRides,
@@ -113,6 +142,28 @@ public class RideController {
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String streetNames) {
         return rideService.findAllStreetNamesIncludingStringIntersectionNode(trafficSignalClusterId, count, region, streetNames);
+    }
+
+    @GetMapping("/intersection_edges/osmId/properties")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionEdgePropertiesByOsmId(
+            @RequestParam Long osmId,
+            @RequestParam WeekDays weekDay,
+            @RequestParam TrafficTimes trafficTime,
+            @RequestParam Integer year
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionEdgesByOsmId(
+                osmId, trafficTime, weekDay, year)));
+    }
+
+    @GetMapping("/intersection_edges/regionId/properties")
+    public ResponseEntity<List<Map<String, Object>>> getIntersectionEdgePropertiesByRegionId(
+            @RequestParam Long regionId,
+            @RequestParam WeekDays weekDay,
+            @RequestParam TrafficTimes trafficTime,
+            @RequestParam Integer year
+    ) {
+        return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionEdgesByRegionId(
+                regionId, trafficTime, weekDay, year)));
     }
 
     @GetMapping("/intersection_edges/aggregate/complete")
@@ -178,6 +229,7 @@ public class RideController {
     @GetMapping("/regions/pageable")
     public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsPageable(
             @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) Integer adminLevel,
             @RequestParam(required = false) Long numberOfRides,
             @RequestParam(required = false) WeekDays weekDay,
             @RequestParam(required = false) TrafficTimes trafficTime,
@@ -185,6 +237,6 @@ public class RideController {
             Pageable pageable
     ) {
         return ResponseEntity.ok(rideService.getIntersectionRegionMetricsPageable(
-                regionId, numberOfRides, weekDay, trafficTime, year, pageable));
+                regionId, adminLevel, numberOfRides, weekDay, trafficTime, year, pageable));
     }
 }

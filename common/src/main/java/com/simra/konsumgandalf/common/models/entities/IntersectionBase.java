@@ -39,6 +39,9 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
     private double speed; // km/h
 
     @Column
+    private double medianSpeed; // km/h
+
+    @Column
     private double duration; // s
 
     @Column
@@ -99,24 +102,18 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
     }
 
     public Map<String, Object> getBaseProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        if (nextIntersection != null) {
-            properties.put("nextIntersectionId", nextIntersection.getId());
-        }
-        if (prevIntersection != null) {
-            properties.put("prevIntersectionId", prevIntersection.getId());
-        }
-        properties.put("id", getId());
-        properties.put("startTime", this.getStartTime());
-        properties.put("endTime", this.getEndTime());
-        properties.put("duration", this.getDuration());
-        properties.put("length", this.getLength());
-        properties.put("speed", this.getSpeed());
-        properties.put("waitingTime", this.getWaitingTime());
-        properties.put("rideId", this.getRide().getId());
-        properties.put("year", this.getYear());
-        properties.put("dayOfWeek", this.getWeekDay());
-        properties.put("trafficTime", this.getTrafficTime());
+        Map<String, Object> properties = super.getBaseProperties();
+        properties.put("nextIntersectionId", nextIntersection != null ? nextIntersection.getId() : null);
+        properties.put("prevIntersectionId", prevIntersection != null ? prevIntersection.getId() : null);
+        properties.put("id", id);
+        properties.put("startTime", startTime);
+        properties.put("endTime", endTime);
+        properties.put("duration", duration);
+        properties.put("length", length);
+        properties.put("speed", speed);
+        properties.put("medianRideSpeed", medianSpeed);
+        properties.put("waitingTime", waitingTime);
+        properties.put("rideId", ride.getId());
         return properties;
     }
 }

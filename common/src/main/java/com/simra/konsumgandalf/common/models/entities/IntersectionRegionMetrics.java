@@ -53,7 +53,7 @@ public class IntersectionRegionMetrics extends TimeBaseClass implements FeatureM
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = this.getBaseProperties();
-        properties.put("regionId", regionId);
+        properties.put("id", regionId);
         properties.put("name", name);
         properties.put("adminLevel", adminLevel);
         properties.put("numberOfRides", numberOfRides);

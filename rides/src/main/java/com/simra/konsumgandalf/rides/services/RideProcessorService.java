@@ -80,7 +80,7 @@ public class RideProcessorService {
         for (List<List<MatchedPoint>> sortedRidePart : sortedRideParts) {
             getIntersections(ride, sortedRidePart, intersectionEdgeList, intersectionNodeList);
         }
-        setWaitingTimes(intersectionNodeList, intersectionEdgeList);
+        setWaitingTimesAndMedianSpeed(intersectionNodeList, intersectionEdgeList);
 
         setContainingRegions(intersectionEdgeList);
         setContainingRegions(intersectionNodeList);
@@ -650,18 +650,20 @@ public class RideProcessorService {
         element.setSpeed(3.6 * element.getLength()/element.getDuration());
     }
 
-    private void setWaitingTimes(List<IntersectionNode> intersectionNodeList, List<IntersectionEdge> intersectionEdgeList) {
+    private void setWaitingTimesAndMedianSpeed(List<? extends IntersectionBase> elements, double medianSpeed) {
+        for  (IntersectionBase base : elements) {
+            base.setMedianSpeed(medianSpeed * 3.6);
+            base.calculateAndSetWaitingTime(medianSpeed);
+        }
+    }
+
+    private void setWaitingTimesAndMedianSpeed(List<IntersectionNode> intersectionNodeList, List<IntersectionEdge> intersectionEdgeList) {
         List<Double> speeds = intersectionEdgeList.stream()
                 .map(e -> e.getLength() / e.getDuration()).sorted().toList();
-        if (!speeds.isEmpty()) {
-            double medianSpeed = speeds.get(speeds.size() / 2);
-            for  (IntersectionEdge intersectionEdge : intersectionEdgeList) {
-                intersectionEdge.calculateAndSetWaitingTime(medianSpeed);
-            }
-            for  (IntersectionNode intersectionNode : intersectionNodeList) {
-                intersectionNode.calculateAndSetWaitingTime(medianSpeed);
-            }
-        }
+        if (speeds.isEmpty()) return;
+        double medianSpeed = speeds.get(speeds.size() / 2);
+        setWaitingTimesAndMedianSpeed(intersectionNodeList, medianSpeed);
+        setWaitingTimesAndMedianSpeed(intersectionEdgeList, medianSpeed);
     }
 
     public void setContainingRegions(List<? extends IntersectionBase> intersections) {

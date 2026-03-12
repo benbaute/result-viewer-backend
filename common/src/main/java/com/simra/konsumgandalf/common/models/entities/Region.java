@@ -48,8 +48,9 @@ public class Region implements FeatureMappable {
     @Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new HashMap<>();
-        properties.put("name", this.getName());
-        properties.put("adminLevel", this.getAdminLevel());
+        properties.put("id", id);
+        properties.put("name", name);
+        properties.put("adminLevel", adminLevel);
         return properties;
     }
 }

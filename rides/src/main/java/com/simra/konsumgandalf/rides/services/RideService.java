@@ -12,10 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class RideService {
@@ -66,6 +63,27 @@ public class RideService {
     public List<IntersectionEdge> getIntersectionEdge(Long rideId) {
         return intersectionEdgeRepository.findByRideId(rideId);
     }
+
+    public List<IntersectionNode> getIntersectionNodesByClusterId(
+            Long trafficSignalClusterId, TrafficTimes trafficTime, WeekDays weekDay, Integer year) {
+        return intersectionNodeRepository.findAllByClusterId(trafficSignalClusterId, trafficTime, weekDay, year);
+    }
+
+    public List<IntersectionEdge> getIntersectionEdgesByOsmId(
+            Long osmId, TrafficTimes trafficTime, WeekDays weekDay, Integer year) {
+        return intersectionEdgeRepository.findAllByOsmId(osmId, trafficTime, weekDay, year);
+    }
+
+    public List<IntersectionNode> getIntersectionNodesByRegionId(
+            Long regionId, TrafficTimes trafficTime, WeekDays weekDay, Integer year) {
+        return intersectionNodeRepository.findAllByRegionId(regionId, trafficTime, weekDay, year);
+    }
+
+    public List<IntersectionEdge> getIntersectionEdgesByRegionId(
+            Long regionId, TrafficTimes trafficTime, WeekDays weekDay, Integer year) {
+        return intersectionEdgeRepository.findAllByRegionId(regionId, trafficTime, weekDay, year);
+    }
+
 
     public List<IntersectionNodeMetrics> getIntersectionNodeMetricsComplete(
             Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
@@ -140,11 +158,12 @@ public class RideService {
     }
 
     public Map<String, Object> getIntersectionRegionMetricsPageable(
-            Long regionId, Long count, WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
+            Long regionId, Integer adminLevel, Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
         Specification<IntersectionRegionMetrics> spec = Specification
                 .where(IntersectionRegionMetricsSpecifications.hasRegionId(regionId))
-                .and(IntersectionBaseMetricsSpecifications.hasMinCount(count))
+                .and(IntersectionRegionMetricsSpecifications.hasAdminLevel(adminLevel))
+                .and(IntersectionBaseMetricsSpecifications.hasMinCount(numberOfRides))
                 .and(TimeSpecifications.hasWeekDay(weekDay))
                 .and(TimeSpecifications.hasTrafficTime(trafficTime))
                 .and(TimeSpecifications.hasYear(year));
@@ -152,6 +171,9 @@ public class RideService {
         return GeoService.getFeatureCollection(intersectionRegionMetricsRepository.findAll(spec, pageable));
     }
 
+    public Optional<IntersectionBase> getIntersectionBase(Long intersectionBaseId) {
+        return intersectionBaseRepository.findById(intersectionBaseId);
+    }
 
     public List<? extends IntersectionBase> getIntersectionBase(
             Long id, TrafficTimes trafficTime, WeekDays weekDay, Integer year, Date startDate, Date endDate) {

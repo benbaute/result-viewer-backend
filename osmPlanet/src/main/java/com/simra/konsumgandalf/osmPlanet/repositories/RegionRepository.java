@@ -25,7 +25,7 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 
 
 
-	@Query("SELECT r.name FROM Region r WHERE r.name ILIKE :prefix%")
+	@Query("SELECT r.name FROM Region r WHERE r.name ILIKE :prefix% ORDER BY r.adminLevel, r.name")
 	List<String> findAllNames(String prefix);
 
 	@Query(value = """
