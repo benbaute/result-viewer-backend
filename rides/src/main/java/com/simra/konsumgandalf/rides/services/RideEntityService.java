@@ -63,7 +63,7 @@ public class RideEntityService {
 
             for (int i = 0; i < allPaths.size(); i += batchSize) {
                 List<String> batch = allPaths.subList(i, Math.min(i + batchSize, allPaths.size()));
-                Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(allPaths));
+                Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(batch));
                 newRidePaths.addAll(batch.stream().filter(path -> !existingPaths.contains(path)).toList());
             }
 
