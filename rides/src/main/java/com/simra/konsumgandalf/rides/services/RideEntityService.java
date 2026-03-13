@@ -58,8 +58,16 @@ public class RideEntityService {
                 .map(Path::toString)
                 .toList();
 
-            Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(allPaths));
-            return allPaths.stream().filter(path -> !existingPaths.contains(path)).toList();
+            int batchSize = 10000;
+            List<String> newRidePaths = new ArrayList<>();
+
+            for (int i = 0; i < allPaths.size(); i += batchSize) {
+                List<String> batch = allPaths.subList(i, Math.min(i + batchSize, allPaths.size()));
+                Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(allPaths));
+                newRidePaths.addAll(batch.stream().filter(path -> !existingPaths.contains(path)).toList());
+            }
+
+            return  newRidePaths;
         }
         catch (IOException e) {
             _logger.error("Error reading files from path: {}", dataPath, e);
