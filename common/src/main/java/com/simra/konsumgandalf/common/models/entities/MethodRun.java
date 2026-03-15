@@ -35,4 +35,5 @@ public class MethodRun {
 		this.name = name;
 		this.duration = duration;
 	}
+
 }

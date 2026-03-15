@@ -47,30 +47,32 @@ public abstract class ValhallaService {
 		this(osmrEndpoint, partitionSize, 10 * 1024 * 1024);
 	}
 
-    private Integer getErrorCode(WebClientResponseException ex) {
-        try {
-            if (ex.getStatusCode() == HttpStatus.BAD_REQUEST) {
-                return new ObjectMapper().readTree(ex.getResponseBodyAsString()).path("error_code").asInt();
-            }
-            return null;
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
+	private Integer getErrorCode(WebClientResponseException ex) {
+		try {
+			if (ex.getStatusCode() == HttpStatus.BAD_REQUEST) {
+				return new ObjectMapper().readTree(ex.getResponseBodyAsString()).path("error_code").asInt();
+			}
+			return null;
+		}
+		catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-    protected boolean isNotFoundStreetSegmentError(WebClientResponseException ex) {
-        Integer errorCode = getErrorCode(ex);
-        if (errorCode == null) {
-            return false;
-        }
-        return errorCode == 430 || errorCode == 441 || errorCode == 442 || errorCode == 443 || errorCode == 444;
-    }
+	protected boolean isNotFoundStreetSegmentError(WebClientResponseException ex) {
+		Integer errorCode = getErrorCode(ex);
+		if (errorCode == null) {
+			return false;
+		}
+		return errorCode == 430 || errorCode == 441 || errorCode == 442 || errorCode == 443 || errorCode == 444;
+	}
 
-    protected boolean isInsufficientShapeError(WebClientResponseException ex) {
-        Integer errorCode = getErrorCode(ex);
-        if (errorCode == null) {
-            return false;
-        }
-        return errorCode == 123;
-    }
+	protected boolean isInsufficientShapeError(WebClientResponseException ex) {
+		Integer errorCode = getErrorCode(ex);
+		if (errorCode == null) {
+			return false;
+		}
+		return errorCode == 123;
+	}
+
 }

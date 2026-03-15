@@ -55,11 +55,12 @@ public interface SafetyMetricsSimraRegionRepository
 			""")
 	List<RideEntityMetricsDTO> findNumberOfRidesAndLengthAll();
 
-    @LogExecutionTimeSubTask
-    @Modifying
-    @Transactional
-    @Query(value = """
-    REFRESH MATERIALIZED VIEW safety_metrics__simra_region;
-""", nativeQuery = true)
-    void updateSafetyMetricsSimraRegion();
+	@LogExecutionTimeSubTask
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    REFRESH MATERIALIZED VIEW safety_metrics__simra_region;
+			""", nativeQuery = true)
+	void updateSafetyMetricsSimraRegion();
+
 }

@@ -10,44 +10,45 @@ import lombok.Setter;
 
 import java.util.Map;
 
-
 @Getter
 @Setter
 @Entity
 public class IntersectionNode extends IntersectionBase implements FeatureMappable {
 
-    private Long startValhallaEdgeId;
-    private Long endValhallaEdgeId;
+	private Long startValhallaEdgeId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "start_osm_id")
-    private PlanetOsmLine startOsmLine;
+	private Long endValhallaEdgeId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "end_osm_id")
-    private PlanetOsmLine endOsmLine;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "start_osm_id")
+	private PlanetOsmLine startOsmLine;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "traffic_signal_cluster_id")
-    private TrafficSignalCluster trafficSignalCluster;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "end_osm_id")
+	private PlanetOsmLine endOsmLine;
 
-    private String streetNames;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "traffic_signal_cluster_id")
+	private TrafficSignalCluster trafficSignalCluster;
+
+	private String streetNames;
 
 	// --- Constructor ---
 	public IntersectionNode() {
 	}
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = this.getBaseProperties();
-        properties.put("startValhallaEdgeId", startValhallaEdgeId);
-        properties.put("endValhallaEdgeId", endValhallaEdgeId);
-        properties.put("startOsmId", startOsmLine != null ? startOsmLine.getId() : null);
-        properties.put("endOsmId", endOsmLine != null ? endOsmLine.getId() : null);
-        properties.put("startName", startOsmLine != null ? startOsmLine.getName() : null);
-        properties.put("endName", endOsmLine != null ? endOsmLine.getName() : null);
-        properties.put("streetNames", streetNames);
-        properties.put("trafficSignalClusterId", trafficSignalCluster.getId());
-        return properties;
-    }
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = this.getBaseProperties();
+		properties.put("startValhallaEdgeId", startValhallaEdgeId);
+		properties.put("endValhallaEdgeId", endValhallaEdgeId);
+		properties.put("startOsmId", startOsmLine != null ? startOsmLine.getId() : null);
+		properties.put("endOsmId", endOsmLine != null ? endOsmLine.getId() : null);
+		properties.put("startName", startOsmLine != null ? startOsmLine.getName() : null);
+		properties.put("endName", endOsmLine != null ? endOsmLine.getName() : null);
+		properties.put("streetNames", streetNames);
+		properties.put("trafficSignalClusterId", trafficSignalCluster.getId());
+		return properties;
+	}
+
 }

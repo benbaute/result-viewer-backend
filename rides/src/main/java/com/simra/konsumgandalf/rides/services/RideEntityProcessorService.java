@@ -31,11 +31,11 @@ import static com.simra.konsumgandalf.common.constants.AppDates.*;
 @Service
 public class RideEntityProcessorService {
 
-    @Autowired
-    @Lazy // Crucial! Prevents "Circular Dependency" errors
-    private RideEntityProcessorService self;
+	@Autowired
+	@Lazy // Crucial! Prevents "Circular Dependency" errors
+	private RideEntityProcessorService self;
 
-    private static Path dataPath;
+	private static Path dataPath;
 
 	private static final ObjectMapper _objectMapper = new ObjectMapper();
 
@@ -56,25 +56,24 @@ public class RideEntityProcessorService {
 	@Autowired
 	private FileReaderService fileReaderService;
 
-    @Autowired
-    private RideProcessorService rideProcessorService;
+	@Autowired
+	private RideProcessorService rideProcessorService;
 
-    @Autowired
-    private GeoService geoService;
+	@Autowired
+	private GeoService geoService;
 
-    static final double MIN_DISTANCE_METERS = 3.0;
-    static final double MAX_SPEED_METERS_PER_SECOND = 30.0; // Above 100 km/h for a bike
+	static final double MIN_DISTANCE_METERS = 3.0;
+	static final double MAX_SPEED_METERS_PER_SECOND = 30.0; // Above 100 km/h for a bike
 
-    RideEntityProcessorService() {}
-
-
+	RideEntityProcessorService() {
+	}
 
 	/**
 	 * Add the CSV data to the ride entity.
 	 * @param path - The path to the ride entity to enrich
 	 * @return - The enriched ride entity
 	 */
-    @LogExecutionTimeSubTask
+	@LogExecutionTimeSubTask
 	public RideEntity enrichRideEntityWithCsv(String path) throws IllegalArgumentException {
 		String content = fileReaderService.readFileFromPath(path);
 
@@ -86,7 +85,7 @@ public class RideEntityProcessorService {
 			.toArray(String[]::new);
 
 		if (filteredParts.length < 2) {
-            throw new IllegalArgumentException("File does not contain enough parts");
+			throw new IllegalArgumentException("File does not contain enough parts");
 		}
 
 		List<RideLocation> rideLocationList = csvUtilService.parseCsvToModel(filteredParts[1], RideLocation.class)
@@ -98,15 +97,15 @@ public class RideEntityProcessorService {
 			throw new IllegalArgumentException("File does not contain enough ride locations");
 		}
 
-        RideEntity rideEntity = new RideEntity(path);
+		RideEntity rideEntity = new RideEntity(path);
 		rideEntity.setRideLocations(rideLocationList);
-        rideEntity.setCleanLocations(getCleanCoordinates(rideLocationList));
-        if (rideEntity.getCleanLocations().size() < 5) {
-            throw new IllegalStateException("File does not contain enough clean ride locations, clean size: " +
-                    rideEntity.getCleanLocations().size() + ", unfiltered size: " + rideLocationList.size());
-        }
+		rideEntity.setCleanLocations(getCleanCoordinates(rideLocationList));
+		if (rideEntity.getCleanLocations().size() < 5) {
+			throw new IllegalStateException("File does not contain enough clean ride locations, clean size: "
+					+ rideEntity.getCleanLocations().size() + ", unfiltered size: " + rideLocationList.size());
+		}
 
-        rideEntity.setCoordinates(generateCoordinateString(rideLocationList));
+		rideEntity.setCoordinates(generateCoordinateString(rideLocationList));
 
 		long[] rideTimestamps = rideLocationList.stream()
 			.map(RideLocation::getTimeStamp)
@@ -153,73 +152,72 @@ public class RideEntityProcessorService {
 		return rideEntity;
 	}
 
-    private ArrayList<MatchInformation> removeDuplicateTimeStamps(ArrayList<MatchInformation> coordinates) {
-        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
-        if (!coordinates.isEmpty()) {
-            nonDuplicateCoordinates.add(coordinates.getFirst());
-            for (MatchInformation current : coordinates) {
-                long previousTime = nonDuplicateCoordinates.getLast().getTimestamp();
-                long currentTime = current.getTimestamp();
-                if (currentTime < previousTime) {
-                    throw new RuntimeException("Timestamps not in order.");
-                }
-                if (currentTime != previousTime) {
-                    nonDuplicateCoordinates.add(current);
-                }
-            }
-        }
-        return nonDuplicateCoordinates;
-    }
+	private ArrayList<MatchInformation> removeDuplicateTimeStamps(ArrayList<MatchInformation> coordinates) {
+		ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+		if (!coordinates.isEmpty()) {
+			nonDuplicateCoordinates.add(coordinates.getFirst());
+			for (MatchInformation current : coordinates) {
+				long previousTime = nonDuplicateCoordinates.getLast().getTimestamp();
+				long currentTime = current.getTimestamp();
+				if (currentTime < previousTime) {
+					throw new RuntimeException("Timestamps not in order.");
+				}
+				if (currentTime != previousTime) {
+					nonDuplicateCoordinates.add(current);
+				}
+			}
+		}
+		return nonDuplicateCoordinates;
+	}
 
-    private ArrayList<MatchInformation> removeSpatialDuplicates(ArrayList<MatchInformation> coordinates) {
-        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
-        if (!coordinates.isEmpty()) {
-            nonDuplicateCoordinates.add(coordinates.getFirst());
-            for (MatchInformation current : coordinates) {
-                MatchInformation previous = nonDuplicateCoordinates.getLast();
-                if (geoService.distance(previous, current) > MIN_DISTANCE_METERS) {
-                    nonDuplicateCoordinates.add(current);
-                }
-            }
-        }
-        return nonDuplicateCoordinates;
-    }
+	private ArrayList<MatchInformation> removeSpatialDuplicates(ArrayList<MatchInformation> coordinates) {
+		ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+		if (!coordinates.isEmpty()) {
+			nonDuplicateCoordinates.add(coordinates.getFirst());
+			for (MatchInformation current : coordinates) {
+				MatchInformation previous = nonDuplicateCoordinates.getLast();
+				if (geoService.distance(previous, current) > MIN_DISTANCE_METERS) {
+					nonDuplicateCoordinates.add(current);
+				}
+			}
+		}
+		return nonDuplicateCoordinates;
+	}
 
-    private ArrayList<MatchInformation> removeTeleportation(ArrayList<MatchInformation> coordinates) {
-        ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
-        if (!coordinates.isEmpty()) {
-            nonDuplicateCoordinates.add(coordinates.getFirst());
-            for (int i = 1; i < coordinates.size(); i++) {
-                MatchInformation previous = nonDuplicateCoordinates.getLast();
-                MatchInformation current = coordinates.get(i);
+	private ArrayList<MatchInformation> removeTeleportation(ArrayList<MatchInformation> coordinates) {
+		ArrayList<MatchInformation> nonDuplicateCoordinates = new ArrayList<>();
+		if (!coordinates.isEmpty()) {
+			nonDuplicateCoordinates.add(coordinates.getFirst());
+			for (int i = 1; i < coordinates.size(); i++) {
+				MatchInformation previous = nonDuplicateCoordinates.getLast();
+				MatchInformation current = coordinates.get(i);
 
-                double dt = current.getTimestamp() - previous.getTimestamp();
-                double speed = geoService.distance(previous, current) / dt; // m/s
+				double dt = current.getTimestamp() - previous.getTimestamp();
+				double speed = geoService.distance(previous, current) / dt; // m/s
 
-                if (speed < MAX_SPEED_METERS_PER_SECOND) {
-                    nonDuplicateCoordinates.add(current);
-                }
-            }
-        }
-        return nonDuplicateCoordinates;
-    }
+				if (speed < MAX_SPEED_METERS_PER_SECOND) {
+					nonDuplicateCoordinates.add(current);
+				}
+			}
+		}
+		return nonDuplicateCoordinates;
+	}
 
-    private ArrayList<MatchInformation> getCleanCoordinates(List<RideLocation> rideLocationList) {
-        ArrayList<MatchInformation> coordinates = new ArrayList<>(rideLocationList
-                .stream()
-                .map(location -> new MatchInformation(
-                        location.getLng(), location.getLat(), location.getTimeStamp() / 1000, Math.min(Math.max(location.getAcc(), 2.0), 50.0)))
-                .toList());
+	private ArrayList<MatchInformation> getCleanCoordinates(List<RideLocation> rideLocationList) {
+		ArrayList<MatchInformation> coordinates = new ArrayList<>(rideLocationList.stream()
+			.map(location -> new MatchInformation(location.getLng(), location.getLat(), location.getTimeStamp() / 1000,
+					Math.min(Math.max(location.getAcc(), 2.0), 50.0)))
+			.toList());
 
-        return removeTeleportation(removeSpatialDuplicates(removeDuplicateTimeStamps(coordinates)));
-    }
+		return removeTeleportation(removeSpatialDuplicates(removeDuplicateTimeStamps(coordinates)));
+	}
 
-    /**
-     * Links a ride entity and its incidents to the closest street segments in the planet
-     * OSM line repository.
-     * @param rideEntity - The csv enriched ride entity
-     */
-    @LogExecutionTimeSubTask
+	/**
+	 * Links a ride entity and its incidents to the closest street segments in the planet
+	 * OSM line repository.
+	 * @param rideEntity - The csv enriched ride entity
+	 */
+	@LogExecutionTimeSubTask
 	public void linkToPlanetOsmLine(RideEntity rideEntity) {
 		List<MatchInformation> coordinates = rideEntity.getCleanLocations();
 
@@ -232,31 +230,31 @@ public class RideEntityProcessorService {
 
 		rideEntity.setPlanetOsmLines(planetOsmLineRepository.findByIds(streetSegmentIdsOfRoute));
 
-        List<RideIncident> incidents = rideEntity.getRideIncidents();
-        int numberOfIncidents = incidents.size();
-        if (numberOfIncidents > 0) {
-            Long[] incidentIds = new Long[numberOfIncidents];
-            Double[] lngs = new Double[numberOfIncidents];
-            Double[] lats = new Double[numberOfIncidents];
+		List<RideIncident> incidents = rideEntity.getRideIncidents();
+		int numberOfIncidents = incidents.size();
+		if (numberOfIncidents > 0) {
+			Long[] incidentIds = new Long[numberOfIncidents];
+			Double[] lngs = new Double[numberOfIncidents];
+			Double[] lats = new Double[numberOfIncidents];
 
-            for (int i = 0; i < numberOfIncidents; i++) {
-                RideIncident inc = incidents.get(i);
-                incidentIds[i] = (long) i;
-                lngs[i] = inc.getLng();
-                lats[i] = inc.getLat();
-            }
+			for (int i = 0; i < numberOfIncidents; i++) {
+				RideIncident inc = incidents.get(i);
+				incidentIds[i] = (long) i;
+				lngs[i] = inc.getLng();
+				lats[i] = inc.getLat();
+			}
 
-            List<Long[]> matches = planetOsmLineRepository.findClosestStreetSegments(
-                    streetSegmentIdsOfRoute, incidentIds, lngs, lats);
+			List<Long[]> matches = planetOsmLineRepository.findClosestStreetSegments(streetSegmentIdsOfRoute,
+					incidentIds, lngs, lats);
 
-            for  (Long[] match : matches) {
-                int incidentId = Math.toIntExact(match[0]);
-                Long osmId = match[1];
-                PlanetOsmLine ref = new PlanetOsmLine();
-                ref.setId(osmId);
-                incidents.get(incidentId).setPlanetOsmLine(ref);
-            }
-        }
+			for (Long[] match : matches) {
+				int incidentId = Math.toIntExact(match[0]);
+				Long osmId = match[1];
+				PlanetOsmLine ref = new PlanetOsmLine();
+				ref.setId(osmId);
+				incidents.get(incidentId).setPlanetOsmLine(ref);
+			}
+		}
 	}
 
 	/**
@@ -338,4 +336,5 @@ public class RideEntityProcessorService {
 	private boolean isAfterStartOfRecording(Date date) {
 		return (date != null) && date.after(START_OF_RECORDING);
 	}
+
 }

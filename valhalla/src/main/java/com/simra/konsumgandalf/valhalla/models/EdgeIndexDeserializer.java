@@ -9,14 +9,15 @@ import java.math.BigInteger;
 
 public class EdgeIndexDeserializer extends JsonDeserializer<Integer> {
 
-    @Override
-    public Integer deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
-        BigInteger value = p.getBigIntegerValue();
+	@Override
+	public Integer deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
+		BigInteger value = p.getBigIntegerValue();
 
-        if (value == null || value.bitLength() > 31) {
-            return null;
-        }
+		if (value == null || value.bitLength() > 31) {
+			return null;
+		}
 
-        return value.intValue();
-    }
+		return value.intValue();
+	}
+
 }

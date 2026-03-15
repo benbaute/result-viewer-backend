@@ -30,25 +30,24 @@ public class RegionService {
 		return regionRepository.findBasicRegionByName(name);
 	}
 
-
 	public List<String> getAllRegions(String prefix) {
 		return regionRepository.findAllNames(prefix);
 	}
 
+	@LogExecutionTime
+	public void exportPolygonJson() throws IOException {
+		List<Map<String, Object>> json = regionRepository.getPolygonRaw();
+		ObjectMapper mapper = new ObjectMapper();
+		File target = new File(exportPath + "/region-map.json");
+		mapper.writeValue(target, json);
+	}
 
-    @LogExecutionTime
-    public void exportPolygonJson() throws IOException {
-        List<Map<String, Object>> json = regionRepository.getPolygonRaw();
-        ObjectMapper mapper = new ObjectMapper();
-        File target = new File(exportPath + "/region-map.json");
-        mapper.writeValue(target, json);
-    }
+	public void saveRegions() {
+		regionRepository.saveRegions();
+	}
 
-    public void saveRegions() {
-        regionRepository.saveRegions();
-    }
+	public boolean emptyRegions() {
+		return regionRepository.count() == 0;
+	}
 
-    public boolean emptyRegions() {
-        return regionRepository.count() == 0;
-    }
 }

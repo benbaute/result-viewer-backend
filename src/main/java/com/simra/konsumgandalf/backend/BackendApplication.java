@@ -13,9 +13,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 		"com.simra.konsumgandalf.rides.services", "com.simra.konsumgandalf.common.logging",
 		"com.simra.konsumgandalf.rides.controllers", "com.simra.konsumgandalf.common.services",
 		"com.simra.konsumgandalf.common.controller", "com.simra.konsumgandalf.backend.services" })
-@EnableJpaRepositories(
-		basePackages = { "com.simra.konsumgandalf.common.repositories", "com.simra.konsumgandalf.rides.repositories",
-				"com.simra.konsumgandalf.osmPlanet.repositories" })
+@EnableJpaRepositories(basePackages = { "com.simra.konsumgandalf.common.repositories",
+		"com.simra.konsumgandalf.rides.repositories", "com.simra.konsumgandalf.osmPlanet.repositories" })
 @EntityScan(basePackages = { "com.simra.konsumgandalf.common.models.entities.osm",
 		"com.simra.konsumgandalf.common.models.entities", "com.simra.konsumgandalf.rides.models.entities" })
 public class BackendApplication {

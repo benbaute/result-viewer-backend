@@ -44,7 +44,6 @@ public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 			@Param("distanceFilter") int distanceFilter, @Param("roadTypes") List<String> roadTypes,
 			@Param("tolerance") double tolerance, @Param("trafficTime") String trafficTime,
 			@Param("weekDay") String weekDay, @Param("year") int year);
-    
 
 	@Query("""
 			    SELECT new com.simra.konsumgandalf.osmPlanet.classes.dtos.FindNumberOfRidesWithinStreetSegmentInTimePeriodDTO(
@@ -78,14 +77,14 @@ public interface OsmHighwayRepository extends PlanetOsmLineRepository {
 	List<String> findAllHighwayIdStartingWith(String idPrefix);
 
 	@Query(value = """
-SELECT p.osm_id as osm_id, ST_AsGeoJSON(ST_TRANSFORM(ST_Simplify(p.way, 5), 4326)) AS way, p.highway
-FROM planet_osm_line p
-WHERE EXISTS (
-   SELECT 1
-   FROM safety_metrics__planet_osm_line s
-   WHERE p.osm_id = s.osm_id
-)
-			""", nativeQuery = true)
+			SELECT p.osm_id as osm_id, ST_AsGeoJSON(ST_TRANSFORM(ST_Simplify(p.way, 5), 4326)) AS way, p.highway
+			FROM planet_osm_line p
+			WHERE EXISTS (
+			   SELECT 1
+			   FROM safety_metrics__planet_osm_line s
+			   WHERE p.osm_id = s.osm_id
+			)
+						""", nativeQuery = true)
 	List<Map<String, Object>> getGridRaw();
 
 }

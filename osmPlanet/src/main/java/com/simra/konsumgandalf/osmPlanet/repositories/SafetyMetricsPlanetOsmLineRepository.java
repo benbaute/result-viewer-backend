@@ -71,11 +71,12 @@ public interface SafetyMetricsPlanetOsmLineRepository
 			""")
 	List<SafetyMetricDTO> getFilteredSafetyMetrics(TrafficTimes trafficTime, WeekDays weekDay, int year);
 
-    @LogExecutionTimeSubTask
-    @Modifying
-    @Transactional
-    @Query(value = """
-    REFRESH MATERIALIZED VIEW safety_metrics__planet_osm_line;
-""", nativeQuery = true)
-    void updateSafetyMetricsPlanetOsmLine();
+	@LogExecutionTimeSubTask
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    REFRESH MATERIALIZED VIEW safety_metrics__planet_osm_line;
+			""", nativeQuery = true)
+	void updateSafetyMetricsPlanetOsmLine();
+
 }

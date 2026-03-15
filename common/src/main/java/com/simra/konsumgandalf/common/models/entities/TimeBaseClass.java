@@ -17,16 +17,16 @@ import java.util.Map;
 @MappedSuperclass
 public class TimeBaseClass {
 
-    @Column(name = "traffic_time", length = 21)
-    @Enumerated(EnumType.STRING)
-    private TrafficTimes trafficTime;
+	@Column(name = "traffic_time", length = 21)
+	@Enumerated(EnumType.STRING)
+	private TrafficTimes trafficTime;
 
-    @Column(name = "week_day", length = 12)
-    @Enumerated(EnumType.STRING)
-    private WeekDays weekDay;
+	@Column(name = "week_day", length = 12)
+	@Enumerated(EnumType.STRING)
+	private WeekDays weekDay;
 
-    @Column(name = "year")
-    private Integer year;
+	@Column(name = "year")
+	private Integer year;
 
 	protected TimeBaseClass() {
 	}
@@ -37,11 +37,12 @@ public class TimeBaseClass {
 		this.year = year;
 	}
 
-    public Map<String, Object> getBaseProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("trafficTime", trafficTime);
-        properties.put("weekDay", weekDay);
-        properties.put("year", year);
-        return properties;
-    }
+	public Map<String, Object> getBaseProperties() {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("trafficTime", trafficTime);
+		properties.put("weekDay", weekDay);
+		properties.put("year", year);
+		return properties;
+	}
+
 }

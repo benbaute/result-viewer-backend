@@ -23,7 +23,7 @@ public class MatchedPoint implements FeatureMappable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-    private Long valhallaEdgeId;
+	private Long valhallaEdgeId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "ride_id", nullable = false)
@@ -32,27 +32,27 @@ public class MatchedPoint implements FeatureMappable {
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "osm_id")
-    private PlanetOsmLine osmLine;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "osm_id")
+	private PlanetOsmLine osmLine;
 
-    @OneToOne
-    @JoinColumn(name = "ride_point_id")
-    private RidePoint ridePoint;
+	@OneToOne
+	@JoinColumn(name = "ride_point_id")
+	private RidePoint ridePoint;
 
-    @ManyToMany(mappedBy = "matchedPoints", fetch = FetchType.LAZY)
-    private List<IntersectionBase> intersections;
+	@ManyToMany(mappedBy = "matchedPoints", fetch = FetchType.LAZY)
+	private List<IntersectionBase> intersections;
 
-    private boolean inIntersection;
+	private boolean inIntersection;
 
-    private Double distanceFromTracePoint;
+	private Double distanceFromTracePoint;
 
-    private int stops;
+	private int stops;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date timestamp;
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date timestamp;
 
-    private double accuracy;
+	private double accuracy;
 
 	// --- Data, not saved ---
 	@Transient
@@ -61,53 +61,54 @@ public class MatchedPoint implements FeatureMappable {
 	@Transient
 	private Integer edgeIndex;
 
-    @Transient
-    private List<TrafficSignalCluster> trafficSignalClusters;
+	@Transient
+	private List<TrafficSignalCluster> trafficSignalClusters;
 
-    @Transient
-    private TrafficSignalCluster inIntersectionCluster;
+	@Transient
+	private TrafficSignalCluster inIntersectionCluster;
 
-    @Transient
-    private PlanetOsmLine prevOsmLine;
-    
-    @Transient
-    private PlanetOsmLine nextOsmLine;
+	@Transient
+	private PlanetOsmLine prevOsmLine;
 
-    @Transient
-    private Long prevValhallaEdgeId;
+	@Transient
+	private PlanetOsmLine nextOsmLine;
 
-    @Transient
-    private Long nextValhallaEdgeId;
+	@Transient
+	private Long prevValhallaEdgeId;
 
-    @Transient
-    private Point rawGPSLocation;
+	@Transient
+	private Long nextValhallaEdgeId;
 
-    @Transient
-    private Point prevRawGPSLocation;
+	@Transient
+	private Point rawGPSLocation;
+
+	@Transient
+	private Point prevRawGPSLocation;
 
 	// --- Constructor ---
 	public MatchedPoint() {
 	}
 
-    public boolean getInIntersection() {
-        return this.inIntersection;
-    }
+	public boolean getInIntersection() {
+		return this.inIntersection;
+	}
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("id", id);
-        properties.put("ridePointId", ridePoint.getId());
-        if (intersections != null && intersections.size() == 1) {
-            properties.put("intersectionId",  intersections.getFirst().getId());
-        }
-        properties.put("rideId", ride.getId());
-        properties.put("timestamp", timestamp);
-        properties.put("accuracy", accuracy);
-        properties.put("osmId", osmLine != null ? osmLine.getId() : null);
-        properties.put("inIntersection", inIntersection);
-        properties.put("distanceFromTracePoint", distanceFromTracePoint);
-        properties.put("stops", stops);
-        return properties;
-    }
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("id", id);
+		properties.put("ridePointId", ridePoint.getId());
+		if (intersections != null && intersections.size() == 1) {
+			properties.put("intersectionId", intersections.getFirst().getId());
+		}
+		properties.put("rideId", ride.getId());
+		properties.put("timestamp", timestamp);
+		properties.put("accuracy", accuracy);
+		properties.put("osmId", osmLine != null ? osmLine.getId() : null);
+		properties.put("inIntersection", inIntersection);
+		properties.put("distanceFromTracePoint", distanceFromTracePoint);
+		properties.put("stops", stops);
+		return properties;
+	}
+
 }

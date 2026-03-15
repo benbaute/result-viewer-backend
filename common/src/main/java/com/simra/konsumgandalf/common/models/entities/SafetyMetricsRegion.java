@@ -13,21 +13,23 @@ import lombok.Getter;
 @org.hibernate.annotations.Immutable
 @org.hibernate.annotations.Subselect("select * from safety_metrics__region")
 public class SafetyMetricsRegion extends SafetyMetrics<SafetyMetricsRegion> {
-    @Column(name = "id")
-    private Long id;
 
-    @Id // This is not really an id column, but else the specification fails
-    @Column(name = "name")
+	@Column(name = "id")
+	private Long id;
+
+	@Id // This is not really an id column, but else the specification fails
+	@Column(name = "name")
 	private String name;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id", insertable = false, updatable = false)
+	@JoinColumn(name = "id", insertable = false, updatable = false)
 	private Region region;
 
-    @Column(name = "total_distance")
+	@Column(name = "total_distance")
 	private Float totalDistance;
 
 	public SafetyMetricsRegion() {
 		super();
 	}
+
 }

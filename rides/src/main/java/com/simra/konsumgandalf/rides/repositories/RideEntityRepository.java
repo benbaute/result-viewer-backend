@@ -11,6 +11,7 @@ import java.util.Map;
 
 @Repository
 public interface RideEntityRepository extends JpaRepository<RideEntity, Long> {
+
 	@Query(value = """
 				SELECT
 					 array_agg(DISTINCT ST_AsGeoJSON(st_transform(r.way, 4326))) as visited_way,
@@ -28,11 +29,11 @@ public interface RideEntityRepository extends JpaRepository<RideEntity, Long> {
 			nativeQuery = true)
 	Map<String, String[]> findRideGeometries(long rideId);
 
+	@Query("""
+			SELECT r.path
+			FROM RideEntity r
+			WHERE r.path IN :paths
+			""")
+	List<String> findExistingPaths(@Param("paths") List<String> paths);
 
-    @Query("""
-    SELECT r.path
-    FROM RideEntity r
-    WHERE r.path IN :paths
-    """)
-    List<String> findExistingPaths(@Param("paths") List<String> paths);
 }

@@ -11,6 +11,7 @@ public class ValhallaEdge {
 	@JsonProperty("way_id")
 	Long id;
 
-    @JsonProperty("id")
-    Long valhallaEdgeId; // Identifier of an edge within the tiled, hierarchical graph
+	@JsonProperty("id")
+	Long valhallaEdgeId; // Identifier of an edge within the tiled, hierarchical graph
+
 }

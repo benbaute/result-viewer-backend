@@ -15,15 +15,18 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class SimraRegion {
+
 	@Id
 	@Column
 	private String name;
 
-    // The regions should be from the same admin level and MUST not overlap or else calculations based on them are messed up
-    // Example: In case of berlin-latest.osm.pbf, SimraRegion "All" is wrong by times 2 as it is constructed by Brandenburg and Berlin,
-    // but Brandenburg is the same Polygon as Berlin for berlin-latest.osm.pbf
+	// The regions should be from the same admin level and MUST not overlap or else
+	// calculations based on them are messed up
+	// Example: In case of berlin-latest.osm.pbf, SimraRegion "All" is wrong by times 2 as
+	// it is constructed by Brandenburg and Berlin,
+	// but Brandenburg is the same Polygon as Berlin for berlin-latest.osm.pbf
 	@ManyToMany
 	@JoinTable(name = "simra_region__region",
 			joinColumns = @JoinColumn(name = "simra_region_name", referencedColumnName = "name"),
@@ -31,9 +34,10 @@ public class SimraRegion {
 	@JsonManagedReference
 	private List<Region> regions;
 
-    @Column(columnDefinition = "geometry(Polygon,4326)")
-    private Polygon way;
+	@Column(columnDefinition = "geometry(Polygon,4326)")
+	private Polygon way;
 
 	public SimraRegion() {
 	}
+
 }

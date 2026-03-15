@@ -19,10 +19,11 @@ import java.util.Map;
 @Getter
 @Setter
 @Entity
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Region implements FeatureMappable {
-    @Id
-    private Long id;
+
+	@Id
+	private Long id;
 
 	@Column
 	private String name;
@@ -30,27 +31,28 @@ public class Region implements FeatureMappable {
 	@Column
 	private int adminLevel;
 
-    @Column(columnDefinition = "geometry(Polygon,4326)")
-    private Polygon way;
+	@Column(columnDefinition = "geometry(Polygon,4326)")
+	private Polygon way;
 
-    // For spatial joins with planet osm line
-    @Column(columnDefinition = "geometry(Polygon,3857)")
-    private Polygon geom3857;
+	// For spatial joins with planet osm line
+	@Column(columnDefinition = "geometry(Polygon,3857)")
+	private Polygon geom3857;
 
 	public Region() {
 	}
 
-    @Override
-    public Geometry getGeom() {
-        return way;
-    }
+	@Override
+	public Geometry getGeom() {
+		return way;
+	}
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("id", id);
-        properties.put("name", name);
-        properties.put("adminLevel", adminLevel);
-        return properties;
-    }
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("id", id);
+		properties.put("name", name);
+		properties.put("adminLevel", adminLevel);
+		return properties;
+	}
+
 }

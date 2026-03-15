@@ -10,4 +10,5 @@ public class OsmServiceTest {
 
 	@InjectMocks
 	private OsmService osmService;
+
 }

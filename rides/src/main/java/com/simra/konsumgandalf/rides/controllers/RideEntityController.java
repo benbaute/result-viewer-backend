@@ -16,9 +16,9 @@ public class RideEntityController {
 	@Autowired
 	private RideEntityService rideEntityService;
 
-
 	@GetMapping("geometries/{id}")
 	public Map<String, String[]> getRideGeometries(@PathVariable long id) {
 		return rideEntityService.getRideGeometries(id);
 	}
+
 }

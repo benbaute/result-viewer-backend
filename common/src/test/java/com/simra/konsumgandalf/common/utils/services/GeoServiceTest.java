@@ -43,27 +43,27 @@ public class GeoServiceTest {
 
 		List<MatchInformation> mList1 = List.of(m1, m2, m3, m4, m5, m6);
 		/*
-        List<Double> speeds = geoService.calculateSpeed(mList1);
-		List<Double> averages = geoService.centeredMovingAverage(speeds, 1);
-		System.out.println("Speeds: " + speeds);
-		System.out.println("Averages: " + geoService.centeredMovingAverage(speeds, 0));
-        System.out.println("Averages: " + geoService.centeredMovingAverage(speeds, 1));
-		System.out.println("Averages: " + geoService.centeredMovingAverage(speeds, 3));
-        System.out.println("Medians: " + geoService.centeredMovingMedian(speeds, 0));
-        System.out.println("Medians: " + geoService.centeredMovingMedian(speeds, 1));
-        System.out.println("Medians: " + geoService.centeredMovingMedian(speeds, 3));
-        *
+		 * List<Double> speeds = geoService.calculateSpeed(mList1); List<Double> averages
+		 * = geoService.centeredMovingAverage(speeds, 1); System.out.println("Speeds: " +
+		 * speeds); System.out.println("Averages: " +
+		 * geoService.centeredMovingAverage(speeds, 0)); System.out.println("Averages: " +
+		 * geoService.centeredMovingAverage(speeds, 1)); System.out.println("Averages: " +
+		 * geoService.centeredMovingAverage(speeds, 3)); System.out.println("Medians: " +
+		 * geoService.centeredMovingMedian(speeds, 0)); System.out.println("Medians: " +
+		 * geoService.centeredMovingMedian(speeds, 1)); System.out.println("Medians: " +
+		 * geoService.centeredMovingMedian(speeds, 3));
+		 *
 		 */
 	}
 
-    @Test
-    public void testAverage() {
-        List<Double> values = List.of(5.0, 5.0, 5.0, 5.0, 5.0, 10.0);
-        //Double average = geoService.calculateAverage(values);
-        //System.out.println(average);
+	@Test
+	public void testAverage() {
+		List<Double> values = List.of(5.0, 5.0, 5.0, 5.0, 5.0, 10.0);
+		// Double average = geoService.calculateAverage(values);
+		// System.out.println(average);
 
-        //Double std = geoService.calculateStandardDeviation(values);
-        //System.out.println(std);
-    }
+		// Double std = geoService.calculateStandardDeviation(values);
+		// System.out.println(std);
+	}
 
 }

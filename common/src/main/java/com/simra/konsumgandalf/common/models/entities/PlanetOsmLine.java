@@ -19,7 +19,7 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
-@Table(indexes = { @Index(columnList = "osm_id")})
+@Table(indexes = { @Index(columnList = "osm_id") })
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class PlanetOsmLine {
@@ -28,13 +28,12 @@ public class PlanetOsmLine {
 	@Column(name = "osm_id", unique = true)
 	private long id;
 
-
-    /**
-     * The metrics indicating the safety of this street segment. Therefore, the
-     * {@link #rideIncident} field is used to calculate the metrics.
-     */
-    @OneToMany(mappedBy = "planetOsmLine")
-    private List<SafetyMetricsPlanetOsmLine> safetyMetricPlanetOsmLines;
+	/**
+	 * The metrics indicating the safety of this street segment. Therefore, the
+	 * {@link #rideIncident} field is used to calculate the metrics.
+	 */
+	@OneToMany(mappedBy = "planetOsmLine")
+	private List<SafetyMetricsPlanetOsmLine> safetyMetricPlanetOsmLines;
 
 	/**
 	 * The incidents that occurred on this street
@@ -49,7 +48,7 @@ public class PlanetOsmLine {
 	@Column
 	private String highway;
 
-    @ManyToMany(mappedBy = "planetOsmLines", fetch = FetchType.LAZY)
+	@ManyToMany(mappedBy = "planetOsmLines", fetch = FetchType.LAZY)
 	@JsonIgnore
 	private Set<RideEntity> rideEntities;
 
@@ -62,4 +61,5 @@ public class PlanetOsmLine {
 
 	public PlanetOsmLine() {
 	}
+
 }

@@ -17,22 +17,22 @@ public interface SimraRegionRepository extends JpaRepository<SimraRegion, Long> 
 
 	Optional<SimraRegion> findByName(String name);
 
-    @Modifying
-    @Transactional
-    @Query(value = """
-UPDATE simra_region s
-SET way = u.union_way
-FROM (
-    SELECT sr.simra_region_name,
-           ST_ConvexHull(ST_Union(r.way)) AS union_way
-    FROM region r
-    JOIN simra_region__region sr
-        ON sr.region_id = r.id
-    GROUP BY sr.simra_region_name
-) u
-WHERE s.name = u.simra_region_name;
-""", nativeQuery = true)
-    void setSimraRegionGeometry();
+	@Modifying
+	@Transactional
+	@Query(value = """
+			UPDATE simra_region s
+			SET way = u.union_way
+			FROM (
+			    SELECT sr.simra_region_name,
+			           ST_ConvexHull(ST_Union(r.way)) AS union_way
+			    FROM region r
+			    JOIN simra_region__region sr
+			        ON sr.region_id = r.id
+			    GROUP BY sr.simra_region_name
+			) u
+			WHERE s.name = u.simra_region_name;
+			""", nativeQuery = true)
+	void setSimraRegionGeometry();
 
 	@Query("""
 				SELECT SUM(ST_LENGTH_M(r.way)) AS totalDistance,
@@ -60,4 +60,5 @@ WHERE s.name = u.simra_region_name;
 
 	@Query("SELECT s FROM SimraRegion s WHERE s.name = :name")
 	Optional<SimraRegion> findWayByName(String name);
+
 }

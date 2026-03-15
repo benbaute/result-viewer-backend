@@ -13,28 +13,24 @@ import java.util.List;
 
 @Repository
 public interface IntersectionRegionMetricsRepository
-        extends JpaRepository<IntersectionRegionMetrics, Long>,
-        JpaSpecificationExecutor<IntersectionRegionMetrics> {
+		extends JpaRepository<IntersectionRegionMetrics, Long>, JpaSpecificationExecutor<IntersectionRegionMetrics> {
 
-    @Modifying
-    @Transactional
-    @Query(value = """
-    REFRESH MATERIALIZED VIEW intersection_region_metrics;
-""", nativeQuery = true)
-    void updateIntersectionRegionMetrics();
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    REFRESH MATERIALIZED VIEW intersection_region_metrics;
+			""", nativeQuery = true)
+	void updateIntersectionRegionMetrics();
 
-    @Query(value = """
-SELECT *
-FROM intersection_region_metrics
-WHERE number_of_rides >= :numberOfRides
-AND week_day = :weekDay
-AND traffic_time = :trafficTime
-AND year = :year
-""", nativeQuery = true)
-    List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(
-            @Param("numberOfRides") Long numberOfRides,
-            @Param("weekDay") String weekDay,
-            @Param("trafficTime") String trafficTime,
-            @Param("year") Integer year
-    );
+	@Query(value = """
+			SELECT *
+			FROM intersection_region_metrics
+			WHERE number_of_rides >= :numberOfRides
+			AND week_day = :weekDay
+			AND traffic_time = :trafficTime
+			AND year = :year
+			""", nativeQuery = true)
+	List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(@Param("numberOfRides") Long numberOfRides,
+			@Param("weekDay") String weekDay, @Param("trafficTime") String trafficTime, @Param("year") Integer year);
+
 }

@@ -28,7 +28,8 @@ public class Ride {
 	public Ride() {
 	}
 
-    public Ride (String path) {
-        this.path = path;
-    }
+	public Ride(String path) {
+		this.path = path;
+	}
+
 }

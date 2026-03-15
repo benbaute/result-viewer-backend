@@ -34,14 +34,14 @@ public class RideEntity extends TimeBaseClass {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date rideEnd;
 
-    @Column(columnDefinition = "geometry(LineString,4326)")
-    private LineString way;
+	@Column(columnDefinition = "geometry(LineString,4326)")
+	private LineString way;
 
 	@Transient
 	private List<RideLocation> rideLocations = new ArrayList<>();
 
-    @Transient
-    private ArrayList<MatchInformation> cleanLocations = new ArrayList<>();
+	@Transient
+	private ArrayList<MatchInformation> cleanLocations = new ArrayList<>();
 
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
 	@JoinColumn(name = "ride_entity_id", referencedColumnName = "id")
@@ -57,9 +57,12 @@ public class RideEntity extends TimeBaseClass {
 	@Column(unique = true)
 	private String path;
 
-	public RideEntity() {}
+	public RideEntity() {
+	}
 
-    public RideEntity(String path) {this.path = path;}
+	public RideEntity(String path) {
+		this.path = path;
+	}
 
 	@PrePersist
 	private void calculateTrafficTimesAndWeekDays() {
@@ -98,4 +101,5 @@ public class RideEntity extends TimeBaseClass {
 			rideIncident.setYear(year);
 		}
 	}
+
 }

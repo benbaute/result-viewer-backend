@@ -13,52 +13,54 @@ import java.util.Map;
 @org.hibernate.annotations.Immutable
 @org.hibernate.annotations.Subselect("select * from intersection_ride_region_metrics")
 public class IntersectionRideRegionMetrics extends TimeBaseClass implements PropertiesMappable {
-    @Id
-    private Long id;
 
-    @Column(name = "region_id")
-    private Long regionId;
+	@Id
+	private Long id;
 
-    @Column(name = "ride_id")
-    private Long rideId;
+	@Column(name = "region_id")
+	private Long regionId;
 
-    @Column(name = "name")
-    private String name;
+	@Column(name = "ride_id")
+	private Long rideId;
 
-    @Column(name = "admin_level")
-    private int adminLevel;
+	@Column(name = "name")
+	private String name;
 
-    @Column(name = "number_of_edges")
-    private int numberOfEdges;
+	@Column(name = "admin_level")
+	private int adminLevel;
 
-    @Column(name = "number_of_nodes")
-    private int numberOfNodes;
+	@Column(name = "number_of_edges")
+	private int numberOfEdges;
 
-    @Column(name = "node_median_waiting_time")
-    private Double nodeMedianWaitingTime; // can be null if no node
+	@Column(name = "number_of_nodes")
+	private int numberOfNodes;
 
-    @Column(name = "length_km")
-    private double length; // km
+	@Column(name = "node_median_waiting_time")
+	private Double nodeMedianWaitingTime; // can be null if no node
 
-    @Column(name = "node_waiting_s_per_km")
-    private double nodeWaitingSPerKm; // s/km
+	@Column(name = "length_km")
+	private double length; // km
 
-    @Column(name = "edge_waiting_s_per_km")
-    private double edgeWaitingSPerKm; // s/km
+	@Column(name = "node_waiting_s_per_km")
+	private double nodeWaitingSPerKm; // s/km
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = this.getBaseProperties();
-        properties.put("rideId", rideId);
-        properties.put("regionId", regionId);
-        properties.put("name", name);
-        properties.put("adminLevel", adminLevel);
-        properties.put("numberOfEdges", numberOfEdges);
-        properties.put("numberOfNodes", numberOfNodes);
-        properties.put("nodeMedianWaitingTime", nodeMedianWaitingTime);
-        properties.put("length", length);
-        properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
-        properties.put("edgeWaitingSPerKm", edgeWaitingSPerKm);
-        return properties;
-    }
+	@Column(name = "edge_waiting_s_per_km")
+	private double edgeWaitingSPerKm; // s/km
+
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = this.getBaseProperties();
+		properties.put("rideId", rideId);
+		properties.put("regionId", regionId);
+		properties.put("name", name);
+		properties.put("adminLevel", adminLevel);
+		properties.put("numberOfEdges", numberOfEdges);
+		properties.put("numberOfNodes", numberOfNodes);
+		properties.put("nodeMedianWaitingTime", nodeMedianWaitingTime);
+		properties.put("length", length);
+		properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
+		properties.put("edgeWaitingSPerKm", edgeWaitingSPerKm);
+		return properties;
+	}
+
 }

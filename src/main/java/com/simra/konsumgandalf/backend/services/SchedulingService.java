@@ -24,43 +24,43 @@ import java.io.IOException;
 @Profile("docker")
 @Service
 public class SchedulingService {
-    @Autowired
-    private LoggingAspect  loggingAspect;
 
-    @Autowired
-    private OsmService osmService;
+	@Autowired
+	private LoggingAspect loggingAspect;
+
+	@Autowired
+	private OsmService osmService;
 
 	@Autowired
 	private RideEntityService rideEntityService;
 
-    @Autowired
-    private RideService rideService;
+	@Autowired
+	private RideService rideService;
 
-    @Autowired
-    private SafetyMetricsService safetyMetricsService;
+	@Autowired
+	private SafetyMetricsService safetyMetricsService;
 
-    @Autowired
+	@Autowired
 	private OsmHighwayService osmHighwayService;
 
 	@Autowired
 	private RegionService regionService;
 
-    @Autowired
-    private SimraRegionService simraRegionService;
+	@Autowired
+	private SimraRegionService simraRegionService;
 
 	private static final Logger _logger = LoggerFactory.getLogger(SchedulingService.class);
-
 
 	@Scheduled(cron = CronExpressions.EVERY_DAY)
 	public void readNewRidesAndCalculateSafetyMetrics() {
 		int loadedRides = rideEntityService.loadAllPreviousRides();
-        if (loadedRides > 0) {
-            safetyMetricsService.updateSafetyMetrics();
-            rideService.updateIntersectionMetrics();
-        }
+		if (loadedRides > 0) {
+			safetyMetricsService.updateSafetyMetrics();
+			rideService.updateIntersectionMetrics();
+		}
 	}
 
-    @Scheduled(cron = CronExpressions.EVERY_DAY)
+	@Scheduled(cron = CronExpressions.EVERY_DAY)
 	public void exportJsons() {
 		try {
 			osmHighwayService.exportGridJson();
@@ -74,26 +74,27 @@ public class SchedulingService {
 	@Async
 	@EventListener(ApplicationReadyEvent.class)
 	public void init() {
-        // This requires that init PostGIS is finished:
-        // The tables planet_osm_line, and planet_osm_nodes, and planet_osm_polygon must not be empty
+		// This requires that init PostGIS is finished:
+		// The tables planet_osm_line, and planet_osm_nodes, and planet_osm_polygon must
+		// not be empty
 		_logger.info("SchedulingService started");
 
-        if (regionService.emptyRegions()) {
-            _logger.info("No regions found, loading regions.");
-            regionService.saveRegions();
-            simraRegionService.createOrUpdateSimraRegions();
-        }
+		if (regionService.emptyRegions()) {
+			_logger.info("No regions found, loading regions.");
+			regionService.saveRegions();
+			simraRegionService.createOrUpdateSimraRegions();
+		}
 
-        if (osmService.emptyTrafficSignals()) {
-            _logger.info("No traffic signals found, loading traffic signals.");
-            osmService.loadTrafficSignalData();
-        }
+		if (osmService.emptyTrafficSignals()) {
+			_logger.info("No traffic signals found, loading traffic signals.");
+			osmService.loadTrafficSignalData();
+		}
 
-        this.readNewRidesAndCalculateSafetyMetrics();
-        this.exportJsons();
+		this.readNewRidesAndCalculateSafetyMetrics();
+		this.exportJsons();
 
 		_logger.info("SchedulingService finished initialization");
-        loggingAspect.printAllStopWatches();
+		loggingAspect.printAllStopWatches();
 	}
 
 }

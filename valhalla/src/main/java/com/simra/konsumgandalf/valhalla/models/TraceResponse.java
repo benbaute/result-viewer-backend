@@ -13,15 +13,16 @@ public class TraceResponse {
 
 	List<ValhallaEdge> edges;
 
-    @JsonProperty("matched_points")
-    List<ValhallaMatchedPoint> matchedPoints;
+	@JsonProperty("matched_points")
+	List<ValhallaMatchedPoint> matchedPoints;
 
-    List<MatchInformation> payloadCoordinates;
+	List<MatchInformation> payloadCoordinates;
 
-    public TraceResponse(List<ValhallaEdge> edges, List<ValhallaMatchedPoint> matchedPoints,
-                         List<MatchInformation> payloadCoordinates) {
-        this.edges = edges;
-        this.matchedPoints = matchedPoints;
-        this.payloadCoordinates = payloadCoordinates;
-    }
+	public TraceResponse(List<ValhallaEdge> edges, List<ValhallaMatchedPoint> matchedPoints,
+			List<MatchInformation> payloadCoordinates) {
+		this.edges = edges;
+		this.matchedPoints = matchedPoints;
+		this.payloadCoordinates = payloadCoordinates;
+	}
+
 }

@@ -14,4 +14,5 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 			    SELECT id FROM Ride
 			""")
 	List<Long> getRideIds();
+
 }

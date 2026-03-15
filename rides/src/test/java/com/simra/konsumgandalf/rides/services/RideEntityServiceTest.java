@@ -54,8 +54,6 @@ public class RideEntityServiceTest {
 
 		RideEntity mockRideEntity;
 
-
-
 		@Nested
 		class ValidateRideLocation {
 
@@ -67,8 +65,6 @@ public class RideEntityServiceTest {
 				mockRideLocation.setLat(1.0);
 				mockRideLocation.setLng(2.0);
 			}
-
-
 
 		}
 
@@ -83,25 +79,17 @@ public class RideEntityServiceTest {
 				mockRideIncident.setLat(1.0);
 			}
 
-
-
 		}
-
-
 
 	}
 
 	@Nested
 	class GenerateNewRideEntity {
 
-
-
 	}
 
 	@Nested
 	class CreateGeometryFromRideLocations {
-
-
 
 	}
 
@@ -126,6 +114,7 @@ public class RideEntityServiceTest {
 			mockRidePath = "valid.csv";
 			START_OF_RECORDING_TIMESTAMP = START_OF_RECORDING.getTime();
 		}
+
 	}
 
 }

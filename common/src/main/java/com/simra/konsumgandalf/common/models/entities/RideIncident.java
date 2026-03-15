@@ -104,9 +104,9 @@ public class RideIncident extends TimeBaseClass {
 		this.scary = scary;
 	}
 
-    public void addParticipantsInvolved(ParticipantType participantInvolved) {
-        this.participantsInvolved.add(participantInvolved);
-    }
+	public void addParticipantsInvolved(ParticipantType participantInvolved) {
+		this.participantsInvolved.add(participantInvolved);
+	}
 
 	/**
 	 * The following attributes pollute the entity with unnecessary information therefore
@@ -151,4 +151,5 @@ public class RideIncident extends TimeBaseClass {
 	@Transient
 	@CsvBindByName(column = "i10")
 	private int i10;
+
 }

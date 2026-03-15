@@ -19,13 +19,14 @@ public class SafetyMetricsSimraRegion extends SafetyMetrics<SafetyMetricsSimraRe
 	private String name;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "name", insertable = false, updatable = false)
+	@JoinColumn(name = "name", insertable = false, updatable = false)
 	private SimraRegion region;
 
-    @Column(name = "total_distance")
+	@Column(name = "total_distance")
 	private Float totalDistance;
 
 	public SafetyMetricsSimraRegion() {
 		super();
 	}
+
 }

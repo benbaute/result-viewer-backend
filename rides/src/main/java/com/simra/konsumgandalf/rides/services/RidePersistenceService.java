@@ -20,11 +20,10 @@ import java.util.List;
 @Service
 public class RidePersistenceService {
 
-
 	private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    @Autowired
-    private RideRepository rideRepository;
+	@Autowired
+	private RideRepository rideRepository;
 
 	@Autowired
 	private RidePointRepository ridePointRepository;
@@ -32,74 +31,75 @@ public class RidePersistenceService {
 	@Autowired
 	private MatchedPointRepository matchedPointRepository;
 
-    @Autowired
-    private IntersectionBaseRepository intersectionBaseRepository;
+	@Autowired
+	private IntersectionBaseRepository intersectionBaseRepository;
 
+	RidePersistenceService() {
+	}
 
-    RidePersistenceService() {}
+	@Transactional
+	public void saveRide(Ride ride) {
+		rideRepository.save(ride);
+	}
 
-    @Transactional
-    public void saveRide(Ride ride) {
-        rideRepository.save(ride);
-    }
+	@Transactional
+	public void saveMatchedPoints(List<MatchedPoint> matchedPoints) {
+		matchedPointRepository.saveAll(matchedPoints);
+	}
 
-    @Transactional
-    public void saveMatchedPoints(List<MatchedPoint> matchedPoints) {
-        matchedPointRepository.saveAll(matchedPoints);
-    }
+	@Transactional
+	protected void saveIntersectionsLists(List<IntersectionNode> intersectionNodeList,
+			List<IntersectionEdge> intersectionEdgeList) {
+		List<IntersectionBase> all = new ArrayList<>();
+		all.addAll(intersectionEdgeList);
+		all.addAll(intersectionNodeList);
 
+		if (all.isEmpty()) {
+			return;
+		}
 
-    @Transactional
-    protected void saveIntersectionsLists(List<IntersectionNode> intersectionNodeList, List<IntersectionEdge> intersectionEdgeList) {
-        List<IntersectionBase> all = new ArrayList<>();
-        all.addAll(intersectionEdgeList);
-        all.addAll(intersectionNodeList);
+		for (int i = 0; i < all.size(); i++) {
+			all.get(i).setIndexInRide(i);
+		}
 
-        if (all.isEmpty()) {
-            return;
-        }
+		List<Integer> prevIndexInRide = new ArrayList<>();
+		for (IntersectionBase element : all) {
+			prevIndexInRide
+				.add(element.getPrevIntersection() != null ? element.getPrevIntersection().getIndexInRide() : null);
+			element.setPrevIntersection(null);
+		}
 
-        for (int i = 0; i < all.size(); i++) {
-            all.get(i).setIndexInRide(i);
-        }
+		intersectionBaseRepository.saveAll(all);
 
-        List<Integer> prevIndexInRide = new ArrayList<>();
-        for (IntersectionBase element : all) {
-            prevIndexInRide.add(element.getPrevIntersection() != null ?
-                    element.getPrevIntersection().getIndexInRide() : null);
-            element.setPrevIntersection(null);
-        }
+		for (int i = 0; i < all.size(); i++) {
+			IntersectionBase current = all.get(i);
+			IntersectionBase prev = prevIndexInRide.get(i) != null ? all.get(prevIndexInRide.get(i)) : null;
 
-        intersectionBaseRepository.saveAll(all);
+			current.setPrevIntersection(prev);
+			if (prev != null) {
+				prev.setNextIntersection(current);
+			}
+		}
 
-        for (int i = 0; i < all.size(); i++) {
-            IntersectionBase current = all.get(i);
-            IntersectionBase prev = prevIndexInRide.get(i) != null ? all.get(prevIndexInRide.get(i)) : null;
+		intersectionBaseRepository.flush();
+	}
 
-            current.setPrevIntersection(prev);
-            if (prev != null) {
-                prev.setNextIntersection(current);
-            }
-        }
+	@Transactional
+	public void saveRidePointsAndSetRideIds(Ride ride) {
+		List<RidePoint> ridePointList = new ArrayList<>();
+		for (MatchInformation loc : ride.getCoordinates()) {
+			RidePoint p = new RidePoint();
+			p.setRide(ride);
+			p.setTimestamp(new Date(loc.getTimestamp() * 1000));
+			Coordinate coord = new Coordinate(loc.getLng(), loc.getLat());
+			p.setGeom(geometryFactory.createPoint(coord));
+			ridePointList.add(p);
+		}
+		ridePointRepository.saveAll(ridePointList);
 
-        intersectionBaseRepository.flush();
-    }
+		for (int i = 0; i < ridePointList.size(); i++) {
+			ride.getCoordinates().get(i).setRidePointId(ridePointList.get(i).getId());
+		}
+	}
 
-    @Transactional
-    public void saveRidePointsAndSetRideIds(Ride ride) {
-        List<RidePoint> ridePointList = new ArrayList<>();
-        for (MatchInformation loc : ride.getCoordinates()) {
-            RidePoint p = new RidePoint();
-            p.setRide(ride);
-            p.setTimestamp(new Date(loc.getTimestamp() * 1000));
-            Coordinate coord = new Coordinate(loc.getLng(), loc.getLat());
-            p.setGeom(geometryFactory.createPoint(coord));
-            ridePointList.add(p);
-        }
-        ridePointRepository.saveAll(ridePointList);
-
-        for (int i = 0; i < ridePointList.size(); i++) {
-            ride.getCoordinates().get(i).setRidePointId(ridePointList.get(i).getId());
-        }
-    }
 }

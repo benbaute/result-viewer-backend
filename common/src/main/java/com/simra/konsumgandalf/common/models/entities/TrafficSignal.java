@@ -19,20 +19,21 @@ public class TrafficSignal implements FeatureMappable {
 	@Id
 	private Long id;
 
-    @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
-    private Point geom;
+	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
+	private Point geom;
 
-    // For accurate comparison in meters
-    @Column(columnDefinition = "geometry(Point,25833)")
-    private Point geom25833;
+	// For accurate comparison in meters
+	@Column(columnDefinition = "geometry(Point,25833)")
+	private Point geom25833;
 
 	public TrafficSignal() {
 	}
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("id", this.getId());
-        return properties;
-    }
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("id", this.getId());
+		return properties;
+	}
+
 }

@@ -17,35 +17,36 @@ import java.util.Map;
 @Setter
 @Entity
 public class RidePoint implements FeatureMappable {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date timestamp;
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date timestamp;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ride_id", nullable = false)
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
-
 	public RidePoint() {
 	}
 
-    public RidePoint(Long id) {
-        this.id = id;
-    }
+	public RidePoint(Long id) {
+		this.id = id;
+	}
 
-    @Override
-    public Map<String, Object> getProperties() {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("id", id);
-        properties.put("timestamp", this.getTimestamp());
-        properties.put("path", this.getRide().getPath());
-        properties.put("rideId", this.ride.getId());
-        return properties;
-    }
+	@Override
+	public Map<String, Object> getProperties() {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("id", id);
+		properties.put("timestamp", this.getTimestamp());
+		properties.put("path", this.getRide().getPath());
+		properties.put("rideId", this.ride.getId());
+		return properties;
+	}
+
 }

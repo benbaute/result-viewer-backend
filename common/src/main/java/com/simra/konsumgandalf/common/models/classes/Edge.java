@@ -10,14 +10,16 @@ import java.util.List;
 @Getter
 @Setter
 public class Edge {
-    private Long valhallaEdgeId;
 
-    private Long osmId;
+	private Long valhallaEdgeId;
 
-    private PlanetOsmLine osmLine;
+	private Long osmId;
 
-    private List<TrafficSignalCluster> trafficSignalClusters;
+	private PlanetOsmLine osmLine;
 
-    public Edge() {
-    }
+	private List<TrafficSignalCluster> trafficSignalClusters;
+
+	public Edge() {
+	}
+
 }

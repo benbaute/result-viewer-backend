@@ -15,9 +15,9 @@ public class SimraRegionController {
 	@Autowired
 	private SimraRegionService simraRegionService;
 
-
 	@GetMapping("/{name}")
 	public SimraRegion getRegionGeometry(@PathVariable String name) {
 		return simraRegionService.getRegionByName(name);
 	}
+
 }

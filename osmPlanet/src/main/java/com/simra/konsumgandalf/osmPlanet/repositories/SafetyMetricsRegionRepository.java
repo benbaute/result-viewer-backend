@@ -49,11 +49,12 @@ public interface SafetyMetricsRegionRepository
 			""")
 	List<SafetyMetricRegionDTO> getFilteredSafetyMetrics(TrafficTimes trafficTime, WeekDays weekDay, int year);
 
-    @LogExecutionTimeSubTask
-    @Modifying
-    @Transactional
-    @Query(value = """
-    REFRESH MATERIALIZED VIEW safety_metrics__region;
-""", nativeQuery = true)
-    void updateSafetyMetricsRegion();
+	@LogExecutionTimeSubTask
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    REFRESH MATERIALIZED VIEW safety_metrics__region;
+			""", nativeQuery = true)
+	void updateSafetyMetricsRegion();
+
 }

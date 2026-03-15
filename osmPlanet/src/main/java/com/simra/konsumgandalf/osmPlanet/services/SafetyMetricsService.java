@@ -129,10 +129,11 @@ public class SafetyMetricsService {
 			.collect(Collectors.toMap(SafetyMetricRegionDTO::getName, SafetyMetricRegionDTO::getDangerousColor));
 	}
 
-    @LogExecutionTime
-    public void updateSafetyMetrics () {
-        safetyMetricsPlanetOsmLineRepository.updateSafetyMetricsPlanetOsmLine();
-        safetyMetricsRegionRepository.updateSafetyMetricsRegion();
-        safetyMetricsSimraRegionRepository.updateSafetyMetricsSimraRegion();
-    }
+	@LogExecutionTime
+	public void updateSafetyMetrics() {
+		safetyMetricsPlanetOsmLineRepository.updateSafetyMetricsPlanetOsmLine();
+		safetyMetricsRegionRepository.updateSafetyMetricsRegion();
+		safetyMetricsSimraRegionRepository.updateSafetyMetricsSimraRegion();
+	}
+
 }

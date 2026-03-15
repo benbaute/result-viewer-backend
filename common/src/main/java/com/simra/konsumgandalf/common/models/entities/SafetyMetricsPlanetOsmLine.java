@@ -18,8 +18,8 @@ public class SafetyMetricsPlanetOsmLine extends SafetyMetrics<SafetyMetricsPlane
 	@Column(name = "osm_id")
 	private Long osmId;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "osm_id", insertable = false, updatable = false)
+	private PlanetOsmLine planetOsmLine;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "osm_id", insertable = false, updatable = false)
-    private PlanetOsmLine planetOsmLine;
 }

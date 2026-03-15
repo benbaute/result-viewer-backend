@@ -9,31 +9,33 @@ import lombok.Setter;
 @Setter
 public class ValhallaMatchedPoint {
 
-    Double lat;
-    Double lon;
+	Double lat;
 
-    @JsonProperty("type")
-    String matchingResult;
+	Double lon;
 
-    @JsonProperty("edge_index")
-    @JsonDeserialize(using = EdgeIndexDeserializer.class)
-    Integer edgeIndex;
+	@JsonProperty("type")
+	String matchingResult;
 
-    @JsonProperty("distance_along_edge")
-    Double distanceAlongEdge;
+	@JsonProperty("edge_index")
+	@JsonDeserialize(using = EdgeIndexDeserializer.class)
+	Integer edgeIndex;
 
-    @JsonProperty("distance_from_trace_point")
-    Double distanceFromTracePoint;
+	@JsonProperty("distance_along_edge")
+	Double distanceAlongEdge;
 
-    public ValhallaMatchedPoint() {
-    }
+	@JsonProperty("distance_from_trace_point")
+	Double distanceFromTracePoint;
 
-    public ValhallaMatchedPoint(ValhallaMatchedPoint other, Integer edgeIndexOffset) {
-        this.lat = other.lat;
-        this.lon = other.lon;
-        this.matchingResult = other.matchingResult;
-        this.edgeIndex = other.edgeIndex != null ? other.edgeIndex + edgeIndexOffset : null;
-        this.distanceAlongEdge = other.distanceAlongEdge;
-        this.distanceFromTracePoint = other.distanceFromTracePoint;
-    }
+	public ValhallaMatchedPoint() {
+	}
+
+	public ValhallaMatchedPoint(ValhallaMatchedPoint other, Integer edgeIndexOffset) {
+		this.lat = other.lat;
+		this.lon = other.lon;
+		this.matchingResult = other.matchingResult;
+		this.edgeIndex = other.edgeIndex != null ? other.edgeIndex + edgeIndexOffset : null;
+		this.distanceAlongEdge = other.distanceAlongEdge;
+		this.distanceFromTracePoint = other.distanceFromTracePoint;
+	}
+
 }

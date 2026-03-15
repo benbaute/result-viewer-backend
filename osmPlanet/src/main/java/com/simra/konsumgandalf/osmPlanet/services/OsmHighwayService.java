@@ -73,11 +73,12 @@ public class OsmHighwayService {
 		return osmHighwayRepository.findAllHighwayIdStartingWith(idPrefix);
 	}
 
-    @LogExecutionTime
+	@LogExecutionTime
 	public void exportGridJson() throws IOException {
 		List<Map<String, Object>> json = osmHighwayRepository.getGridRaw();
 		ObjectMapper mapper = new ObjectMapper();
 		File target = new File(exportPath + "/street-map.json");
 		mapper.writeValue(target, json);
 	}
+
 }

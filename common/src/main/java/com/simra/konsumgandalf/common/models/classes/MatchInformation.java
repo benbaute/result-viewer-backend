@@ -17,17 +17,18 @@ public class MatchInformation extends Coordinate implements Serializable {
 	@JsonProperty("time")
 	private long timestamp; // in seconds
 
-    private double accuracy;
+	private double accuracy;
 
-    @JsonIgnore
-    private Long ridePointId;
+	@JsonIgnore
+	private Long ridePointId;
 
 	public MatchInformation(double lng, double lat, long time, double accuracy) {
 		super(lng, lat);
 		this.timestamp = time;
-        this.accuracy = accuracy;
+		this.accuracy = accuracy;
 	}
 
 	public MatchInformation() {
 	}
+
 }

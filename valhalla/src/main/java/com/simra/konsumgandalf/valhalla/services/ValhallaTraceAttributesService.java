@@ -34,43 +34,45 @@ public class ValhallaTraceAttributesService extends ValhallaService {
 		TURN_PENALTY_FACTOR = turnPenaltyFactor;
 	}
 
-    @LogExecutionTimeSubTask
+	@LogExecutionTimeSubTask
 	public List<Long> calculateStreetSegmentIdsOfRoute(List<MatchInformation> coordinates) {
 		List<List<MatchInformation>> partitions = Lists.partition(coordinates, DEFAULT_PARTITION_SIZE);
-        List<Long> results = new ArrayList<>();
+		List<Long> results = new ArrayList<>();
 
-        for (List<MatchInformation> chunk : partitions) {
-            results.addAll(fetchWithRetry(chunk));
-        }
-        return results;
+		for (List<MatchInformation> chunk : partitions) {
+			results.addAll(fetchWithRetry(chunk));
+		}
+		return results;
 	}
 
 	public List<Long> fetchWithRetry(List<MatchInformation> chunk) {
-        List<Long> results = new ArrayList<>();
-        try {
-            if (chunk.size() >= 4) {
-                results.addAll(fetchIdsFromChunk(chunk));
-            }
-            return results;
-        } catch (WebClientResponseException ex) {
-            if (isInsufficientShapeError(ex)) {
-                logger.warn("Insufficient shape, chunk size: {}", chunk.size());
-                return results;
-            }
-            if (!isNotFoundStreetSegmentError(ex)) {
-                logger.error("Unexpected error: {} - HTTP Status: {}", ex.getResponseBodyAsString(), ex.getStatusCode());
-                return results;
-            }
-            if (chunk.size() >= 32) {
-                List<List<MatchInformation>> subPartitions = Lists.partition(chunk, chunk.size() / 2);
-                List<List<Long>> subResults = subPartitions.stream().map(this::fetchWithRetry).toList();
-                for (List<Long> subResult : subResults) {
-                    results.addAll(subResult);
-                }
-                return results;
-            }
-            return results;
-        }
+		List<Long> results = new ArrayList<>();
+		try {
+			if (chunk.size() >= 4) {
+				results.addAll(fetchIdsFromChunk(chunk));
+			}
+			return results;
+		}
+		catch (WebClientResponseException ex) {
+			if (isInsufficientShapeError(ex)) {
+				logger.warn("Insufficient shape, chunk size: {}", chunk.size());
+				return results;
+			}
+			if (!isNotFoundStreetSegmentError(ex)) {
+				logger.error("Unexpected error: {} - HTTP Status: {}", ex.getResponseBodyAsString(),
+						ex.getStatusCode());
+				return results;
+			}
+			if (chunk.size() >= 32) {
+				List<List<MatchInformation>> subPartitions = Lists.partition(chunk, chunk.size() / 2);
+				List<List<Long>> subResults = subPartitions.stream().map(this::fetchWithRetry).toList();
+				for (List<Long> subResult : subResults) {
+					results.addAll(subResult);
+				}
+				return results;
+			}
+			return results;
+		}
 	}
 
 	public List<Long> fetchIdsFromChunk(List<MatchInformation> coordinates) {
@@ -88,6 +90,7 @@ public class ValhallaTraceAttributesService extends ValhallaService {
 			.map(ValhallaEdge::getId)
 			.distinct()
 			.collectList()
-            .block();
+			.block();
 	}
+
 }
