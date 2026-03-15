@@ -239,6 +239,28 @@ public class RideService {
         return getMatchedPointsByBaseId(id).stream().map(MatchedPoint::getRidePoint).toList();
     }
 
+    public byte[] getNodeMetricsTile(int z, int x, int y,
+                                   Long numberOfRides, String weekDay, String trafficTime, int year) {
+        return intersectionNodeMetricsRepository.getNodeMetricsTile(
+                z, x, y, numberOfRides, weekDay, trafficTime, year);
+    }
+    public byte[] getNodeMetricsStartTile(int z, int x, int y,
+                                   Long numberOfRides, String weekDay, String trafficTime, int year) {
+        return intersectionNodeMetricsRepository.getNodeMetricsStartTile(
+                z, x, y, numberOfRides, weekDay, trafficTime, year);
+    }
+
+    public byte[] getEdgeMetricsTile(int z, int x, int y,
+                                     Long numberOfRides, String weekDay, String trafficTime, int year) {
+        return intersectionEdgeMetricsRepository.getEdgeMetricsTile(
+                z, x, y, numberOfRides, weekDay, trafficTime, year);
+    }
+    public byte[] getEdgeMetricsStartTile(int z, int x, int y,
+                                          Long numberOfRides, String weekDay, String trafficTime, int year) {
+        return intersectionEdgeMetricsRepository.getEdgeMetricsStartTile(
+                z, x, y, numberOfRides, weekDay, trafficTime, year);
+    }
+
     @LogExecutionTime
     public void updateIntersectionMetrics() {
         intersectionNodeMetricsRepository.updateIntersectionNodeMetrics();

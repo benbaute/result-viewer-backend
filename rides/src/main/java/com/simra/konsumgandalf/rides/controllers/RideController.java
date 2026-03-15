@@ -250,4 +250,75 @@ public class RideController {
         return ResponseEntity.ok(GeoService.getPropertiesCollection(rideService.getIntersectionRideRegionMetrics(
                 regionId, weekDay, trafficTime, year)));
     }
+
+
+    @GetMapping(value = "/node-metrics/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getNodeMetricsTiles(
+            @PathVariable int z,
+            @PathVariable int x,
+            @PathVariable int y,
+            @RequestParam Long numberOfRides,
+            @RequestParam String weekDay,
+            @RequestParam String trafficTime,
+            @RequestParam Integer year
+    ) {
+
+        byte[] tile = rideService.getNodeMetricsTile(z, x, y, numberOfRides, weekDay, trafficTime, year);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
+    @GetMapping(value = "/node-metrics/start/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getNodeMetricsStartTiles(
+            @PathVariable int z,
+            @PathVariable int x,
+            @PathVariable int y,
+            @RequestParam Long numberOfRides,
+            @RequestParam String weekDay,
+            @RequestParam String trafficTime,
+            @RequestParam Integer year
+    ) {
+
+        byte[] tile = rideService.getNodeMetricsStartTile(z, x, y, numberOfRides, weekDay, trafficTime, year);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
+
+    @GetMapping(value = "/edge-metrics/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getEdgeMetricsTiles(
+            @PathVariable int z,
+            @PathVariable int x,
+            @PathVariable int y,
+            @RequestParam Long numberOfRides,
+            @RequestParam String weekDay,
+            @RequestParam String trafficTime,
+            @RequestParam Integer year
+    ) {
+
+        byte[] tile = rideService.getEdgeMetricsTile(z, x, y, numberOfRides, weekDay, trafficTime, year);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
+    @GetMapping(value = "/edge-metrics/start/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getEdgeMetricsStartTiles(
+            @PathVariable int z,
+            @PathVariable int x,
+            @PathVariable int y,
+            @RequestParam Long numberOfRides,
+            @RequestParam String weekDay,
+            @RequestParam String trafficTime,
+            @RequestParam Integer year
+    ) {
+
+        byte[] tile = rideService.getEdgeMetricsStartTile(z, x, y, numberOfRides, weekDay, trafficTime, year);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
 }

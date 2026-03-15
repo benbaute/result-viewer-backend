@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,15 +99,6 @@ FROM intersection
 
 
     @Query(value = """
-SELECT c.*
-FROM traffic_signal_cluster c
-JOIN traffic_signal_cluster__planet_osm_line l
-ON c.id = l.traffic_signal_cluster_id
-WHERE l.osm_id = :osmLineId
-""", nativeQuery = true)
-    List<TrafficSignalCluster> findByOsmLineId(Long osmLineId);
-
-    @Query(value = """
 SELECT l.id, c
 FROM TrafficSignalCluster c
 JOIN c.osmLines l
@@ -127,4 +119,21 @@ FROM traffic_signal_cluster
 WHERE :trafficSignalClusterId = id
 """, nativeQuery = true)
     List<TrafficSignalCluster> findByTrafficSignalClusterId(Long trafficSignalClusterId);
+
+
+    @Query(value = """
+WITH
+-- Create the bounding box for the tile in Web Mercator (3857)
+bounds AS (
+  SELECT ST_TileEnvelope(:z, :x, :y) AS geom
+),
+mvtgeom AS (
+    SELECT ST_AsMVTGeom(t.geom3857, bounds.geom) AS geom, t.id
+    FROM traffic_signal_cluster t, bounds
+    WHERE t.geom3857 && bounds.geom
+)
+-- 3. Package into binary
+SELECT ST_AsMVT(mvtgeom.*, 'cluster-layer') FROM mvtgeom
+    """, nativeQuery = true)
+    byte[] getClusterTile(@Param("z") int z, @Param("x") int x, @Param("y") int y);
 }

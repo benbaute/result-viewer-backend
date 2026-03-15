@@ -93,6 +93,9 @@ CREATE INDEX IF NOT EXISTS edge_osm_id ON intersection_edge (prev_osm_id, osm_id
 CREATE INDEX IF NOT EXISTS edge_valhalla ON
     intersection_edge (prev_valhalla_edge_id, valhalla_edge_id, next_valhalla_edge_id);
 
+
+CREATE INDEX IF NOT EXISTS traffic_signal_geom4326_idx ON traffic_signal USING GIST (geom);
+
 --- Custom functions
 CREATE OR REPLACE FUNCTION find_names_with_prefix(_prefix TEXT)
 RETURNS TABLE(name VARCHAR)
@@ -494,6 +497,8 @@ FROM (
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
     ON intersection_edge_metrics (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS intersection_edge_query ON intersection_edge_metrics(week_day, traffic_time, year, number_of_rides);
+CREATE INDEX IF NOT EXISTS intersection_edge_metrics_geom4326_idx ON intersection_edge_metrics USING GIST (geom);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_node_metrics AS
@@ -558,6 +563,8 @@ FROM (
 ;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_node_metrics_pk
     ON intersection_node_metrics (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS intersection_node_query ON intersection_node_metrics(week_day, traffic_time, year, number_of_rides);
+CREATE INDEX IF NOT EXISTS intersection_node_metrics_geom4326_idx ON intersection_node_metrics USING GIST (geom);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS

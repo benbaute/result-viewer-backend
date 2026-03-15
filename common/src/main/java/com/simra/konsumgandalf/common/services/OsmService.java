@@ -153,10 +153,6 @@ public class OsmService {
         return trafficSignalClusterRepository.findByTrafficSignalClusterId(trafficSignalClusterId);
     }
 
-    public List<TrafficSignalCluster> findTrafficSignalClustersByOsmLineId(Long osmLineId) {
-        return trafficSignalClusterRepository.findByOsmLineId(osmLineId);
-    }
-
     @LogExecutionTimeSubTask
     public List<Object[]> findTrafficSignalClustersByOsmLineIds(List<Long> osmLineIds) {
         return trafficSignalClusterRepository.findByOsmLineIds(osmLineIds);
@@ -164,6 +160,15 @@ public class OsmService {
 
     public List<TrafficSignalCluster> getAllTrafficSignalClusters() {
         return trafficSignalClusterRepository.findAll();
+    }
+
+
+    public byte[] getClusterTile(int z, int x, int y) {
+        return trafficSignalClusterRepository.getClusterTile(z, x, y);
+    }
+
+    public byte[] getSignalTile(int z, int x, int y) {
+        return trafficSignalRepository.getSignalTile(z, x, y);
     }
 
 

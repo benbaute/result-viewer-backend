@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.entities.TrafficSignal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,4 +39,21 @@ ON s.id = ANY(c.original_signal_ids)
 WHERE :trafficSignalClusterId = c.id
 """, nativeQuery = true)
     List<TrafficSignal> findByTrafficSignalClusterId(Long trafficSignalClusterId);
+
+    @Query(value = """
+WITH
+-- Create the bounding box for the tile in Web Mercator (3857)
+bounds AS (
+  SELECT ST_TileEnvelope(:z, :x, :y) AS geom
+),
+mvtgeom AS (
+    -- Use available GIST index, TODO: use 3857 instead
+    SELECT ST_AsMVTGeom(st_transform(t.geom, 3857), bounds.geom) AS geom, t.id
+    FROM traffic_signal t, bounds
+    WHERE t.geom && st_transform(bounds.geom, 4326)
+)
+-- 3. Package into binary
+SELECT ST_AsMVT(mvtgeom.*, 'signal-layer') FROM mvtgeom -- layer name must match frontend
+    """, nativeQuery = true)
+    byte[] getSignalTile(@Param("z") int z, @Param("x") int x, @Param("y") int y);
 }

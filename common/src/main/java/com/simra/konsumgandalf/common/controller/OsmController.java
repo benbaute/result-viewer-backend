@@ -39,4 +39,24 @@ public class OsmController {
         return ResponseEntity.ok(GeoService.getFeatureCollection(
                 osmService.findTrafficSignalClustersByTrafficSignalClusterId(trafficSignalClusterId)));
     }
+
+    @GetMapping(value = "/cluster/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getClusterTiles(@PathVariable int z, @PathVariable int x, @PathVariable int y) {
+
+        byte[] tile = osmService.getClusterTile(z, x, y);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
+
+    @GetMapping(value = "/signal/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")
+    public ResponseEntity<byte[]> getSignalTiles(@PathVariable int z, @PathVariable int x, @PathVariable int y) {
+
+        byte[] tile = osmService.getSignalTile(z, x, y);
+        if (tile.length == 0) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tile);
+    }
 }
