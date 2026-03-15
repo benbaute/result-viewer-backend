@@ -3,9 +3,12 @@
 **/test
 ./build
 **/build
+!build/libs/
 .github
 .idea
 documentation
 *.md
+
+**/dataset/
 
 *.json

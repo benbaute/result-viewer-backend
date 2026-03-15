@@ -87,3 +87,7 @@ dependencies {
 repositories {
     mavenCentral()
 }
+
+tasks.getByName<Jar>("jar") {
+    enabled = false
+}

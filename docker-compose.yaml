@@ -3,6 +3,7 @@ name: simra
 services:
     spring:
         container_name: spring-backend
+        build: .  # Requires: ./gradlew build -x test    Build: docker compose build spring
         image: codinggandalf/simra-backend:latest
         # platform: linux/arm64
         env_file:
@@ -19,9 +20,8 @@ services:
             redis:
                 condition: service_healthy
         volumes:
-            - /home/ben/Documents/simra/dataset/simra-test/Rides:/rides
-            - /home/ben/Documents/simra/dataset/simra-test/Profiles:/profiles
-            - bloomfilter:/bloomfilter
+            # - /home/test/Documents/simra/dataset/RidesLinks:/rides # would copy data from harddrive to docker
+            - /home/test/Documents/simra/result-viewer-frontend/src/assets/maplibre:/maplibre-output
         healthcheck:
             test: ["CMD-SHELL", "curl -f http://localhost:8080/api/actuator/health || true"]
             interval: 10s
@@ -123,7 +123,6 @@ services:
 
 volumes:
     postgis-data:
-    bloomfilter:
     redis-data:
 
 networks:

@@ -1,22 +1,5 @@
-FROM gradle:jdk23-alpine AS builder
-
-COPY --chown=gradle:gradle . /home/gradle/src
-WORKDIR /home/gradle/src
-
-RUN gradle build --no-daemon -x test
-
-FROM eclipse-temurin:23-jre-alpine AS production
-
-RUN addgroup -S spring && adduser -S spring -G spring && \
-    mkdir -p /app && mkdir -p /bloomfilter \
-    && chown -R spring:spring /app && chown -R spring:spring /bloomfilter
-USER spring:spring
-
-COPY --from=builder /home/gradle/src/build/libs/*.jar /app/app.jar
-
-VOLUME ["/app/export"]
-
-EXPOSE 8080
-
-CMD ["java", "-XX:+UseContainerSupport", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200", "-jar","/app/app.jar"]
-
+FROM eclipse-temurin:23-jre-alpine
+WORKDIR /app
+# Only copy the resulting JAR build with gradle, nothing else
+COPY build/libs/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
