@@ -10,10 +10,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class GeoService {
@@ -26,11 +23,13 @@ public class GeoService {
 		return createFeatureCollection(elements.stream().map(FeatureMappable::getFeatureMap).toList());
 	}
 
+	public static Map<String, Object> getPageableMap(Page<?> page, String key, Object value) {
+		return Map.of("metadata", Map.of("totalElements", page.getTotalElements(), "totalPages", page.getTotalPages(),
+				"currentPage", page.getNumber()), key, value);
+	}
+
 	public static Map<String, Object> getFeatureCollection(Page<? extends FeatureMappable> page) {
-		return Map.of("metadata",
-				Map.of("totalElements", page.getTotalElements(), "totalPages", page.getTotalPages(), "currentPage",
-						page.getNumber()),
-				"geoData",
+		return getPageableMap(page, "geoData",
 				createFeatureCollection(page.getContent().stream().map(FeatureMappable::getFeatureMap).toList()));
 	}
 

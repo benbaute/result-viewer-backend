@@ -85,6 +85,10 @@ CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signa
 CREATE INDEX IF NOT EXISTS region_geom_3857_idx ON region USING GIST (geom3857);
 
 
+CREATE INDEX IF NOT EXISTS base_ride ON intersection_base (ride_id);
+CREATE INDEX IF NOT EXISTS matched_point_ride ON matched_point(ride_id);
+CREATE INDEX IF NOT EXISTS ride_point_ride ON ride_point(ride_id);
+
 CREATE INDEX IF NOT EXISTS node_traffic_signal_cluster_id ON intersection_node (traffic_signal_cluster_id);
 CREATE INDEX IF NOT EXISTS node_valhalla ON
     intersection_node (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id);

@@ -161,8 +161,8 @@ public class RideController {
 	}
 
 	@GetMapping("/ids")
-	public ResponseEntity<List<Long>> getRideIds() {
-		return ResponseEntity.ok(rideService.getRideIds());
+	public ResponseEntity<Map<String, Object>> getRideIds(@RequestParam(required = false) Long id, Pageable pageable) {
+		return ResponseEntity.ok(rideService.getRideIdsPageable(id, pageable));
 	}
 
 	@GetMapping("/ride/{intersectionBaseId}")

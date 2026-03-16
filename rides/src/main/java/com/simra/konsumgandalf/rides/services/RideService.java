@@ -8,6 +8,7 @@ import com.simra.konsumgandalf.common.utils.services.GeoService;
 import com.simra.konsumgandalf.rides.classes.specifications.*;
 import com.simra.konsumgandalf.rides.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -138,8 +139,10 @@ public class RideService {
 		return intersectionEdgeRepository.findAllStreetNames(count, region, name);
 	}
 
-	public List<Long> getRideIds() {
-		return rideRepository.getRideIds();
+	public Map<String, Object> getRideIdsPageable(Long id, Pageable pageable) {
+		Specification<Ride> spec = Specification.where(RideSpecifications.hasIdLike(id));
+		Page<Ride> pages = rideRepository.findAll(spec, pageable);
+		return GeoService.getPageableMap(pages, "ids", pages.getContent().stream().map(Ride::getId).toList());
 	}
 
 	public List<Long> getRideIdByIntersectionBaseId(Long intersectionBaseId) {
