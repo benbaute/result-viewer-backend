@@ -90,8 +90,7 @@ CREATE INDEX IF NOT EXISTS matched_point_ride ON matched_point(ride_id);
 CREATE INDEX IF NOT EXISTS ride_point_ride ON ride_point(ride_id);
 
 CREATE INDEX IF NOT EXISTS node_traffic_signal_cluster_id ON intersection_node (traffic_signal_cluster_id);
-CREATE INDEX IF NOT EXISTS node_valhalla ON
-    intersection_node (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id);
+CREATE INDEX IF NOT EXISTS node_valhalla ON intersection_node (start_valhalla_edge_id, end_valhalla_edge_id);
 
 CREATE INDEX IF NOT EXISTS edge_osm_id ON intersection_edge (prev_osm_id, osm_id, next_osm_id);
 CREATE INDEX IF NOT EXISTS edge_valhalla ON

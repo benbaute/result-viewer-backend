@@ -10,7 +10,10 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class GeoService {
@@ -28,13 +31,16 @@ public class GeoService {
 				"currentPage", page.getNumber()), key, value);
 	}
 
-	public static Map<String, Object> getFeatureCollection(Page<? extends FeatureMappable> page) {
-		return getPageableMap(page, "geoData",
-				createFeatureCollection(page.getContent().stream().map(FeatureMappable::getFeatureMap).toList()));
+	public static Map<String, Object> getFeatureCollectionPageable(Page<? extends FeatureMappable> page) {
+		return getPageableMap(page, "geoData", getFeatureCollection(page.getContent()));
 	}
 
 	public static List<Map<String, Object>> getPropertiesCollection(List<? extends PropertiesMappable> elements) {
 		return elements.stream().map(PropertiesMappable::getProperties).toList();
+	}
+
+	public static Map<String, Object> getPropertiesCollectionPageable(Page<? extends PropertiesMappable> page) {
+		return getPageableMap(page, "properties", getPropertiesCollection(page.getContent()));
 	}
 
 	public double calculateAverage(List<Double> values) {

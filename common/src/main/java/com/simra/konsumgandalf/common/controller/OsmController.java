@@ -18,21 +18,11 @@ public class OsmController {
 	@Autowired
 	private OsmService osmService;
 
-	@GetMapping("/traffic-signals")
-	public ResponseEntity<Map<String, Object>> getAllTrafficSignals() {
-		return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.getAllTrafficSignals()));
-	}
-
 	@GetMapping("/traffic-signals/cluster/{trafficSignalClusterId}")
 	public ResponseEntity<Map<String, Object>> findTrafficSignalsByTrafficSignalClusterId(
 			@PathVariable Long trafficSignalClusterId) {
 		return ResponseEntity.ok(GeoService
 			.getFeatureCollection(osmService.findTrafficSignalsByTrafficSignalClusterId(trafficSignalClusterId)));
-	}
-
-	@GetMapping("/cluster-polygons")
-	public ResponseEntity<Map<String, Object>> getAllTrafficSignalClusterPolygons() {
-		return ResponseEntity.ok(GeoService.getFeatureCollection(osmService.getAllTrafficSignalClusters()));
 	}
 
 	@GetMapping("/cluster-polygons/{trafficSignalClusterId}")

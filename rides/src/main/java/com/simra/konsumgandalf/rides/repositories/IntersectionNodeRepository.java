@@ -1,72 +1,18 @@
 package com.simra.konsumgandalf.rides.repositories;
 
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
-import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
-import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Date;
 import java.util.List;
 
 @Repository
-public interface IntersectionNodeRepository extends JpaRepository<IntersectionNode, Long> {
+public interface IntersectionNodeRepository
+		extends JpaRepository<IntersectionNode, Long>, JpaSpecificationExecutor<IntersectionNode> {
 
 	List<IntersectionNode> findByRideId(Long rideId);
-
-	@Query(value = """
-			SELECT node
-			FROM IntersectionNode node
-			WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-			AND :startId IS NOT DISTINCT FROM node.startValhallaEdgeId
-			AND :endId IS NOT DISTINCT FROM node.endValhallaEdgeId
-			AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
-			AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
-			AND (:year = 2000 OR node.year = :year)
-			""")
-	List<IntersectionNode> findByClusterIdGroupValhallaEdgeId(
-			@Param("trafficSignalClusterId") Long trafficSignalClusterId, @Param("startId") Long startId,
-			@Param("endId") Long endId, @Param("trafficTime") TrafficTimes trafficTime,
-			@Param("weekDay") WeekDays weekDay, @Param("year") Integer year);
-
-	@Query(value = """
-			SELECT node
-			FROM IntersectionNode node
-			WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-			AND :startId IS NOT DISTINCT FROM node.startValhallaEdgeId
-			AND :endId IS NOT DISTINCT FROM node.endValhallaEdgeId
-			AND node.startTime >= :startDate
-			AND node.endTime <= :endDate
-			""")
-	List<IntersectionNode> findByClusterIdGroupValhallaEdgeId(
-			@Param("trafficSignalClusterId") Long trafficSignalClusterId, @Param("startId") Long startId,
-			@Param("endId") Long endId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
-
-	@Query(value = """
-			SELECT node
-			FROM IntersectionNode node
-			WHERE :trafficSignalClusterId = node.trafficSignalCluster.id
-			AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
-			AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
-			AND (:year = 2000 OR node.year = :year)
-			""")
-	List<IntersectionNode> findAllByClusterId(@Param("trafficSignalClusterId") Long trafficSignalClusterId,
-			@Param("trafficTime") TrafficTimes trafficTime, @Param("weekDay") WeekDays weekDay,
-			@Param("year") Integer year);
-
-	@Query(value = """
-			SELECT DISTINCT node
-			FROM IntersectionNode node
-			JOIN node.regions r
-			WHERE r.id = :id
-			AND (:weekDay = 'ALL_WEEK' OR node.weekDay = :weekDay)
-			AND (:trafficTime = 'ALL_DAY' OR node.trafficTime = :trafficTime)
-			AND (:year = 2000 OR node.year = :year)
-			""")
-	List<IntersectionNode> findAllByRegionId(@Param("id") Long id, @Param("trafficTime") TrafficTimes trafficTime,
-			@Param("weekDay") WeekDays weekDay, @Param("year") Integer year);
 
 	@Query(value = """
 			SELECT DISTINCT node.street_names
