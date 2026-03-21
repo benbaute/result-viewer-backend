@@ -1,7 +1,9 @@
 package com.simra.konsumgandalf.rides.controllers;
 
 import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
+import com.simra.konsumgandalf.common.models.entities.IntersectionEdgeMetrics;
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
+import com.simra.konsumgandalf.common.models.entities.IntersectionNodeMetrics;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
@@ -43,10 +45,10 @@ public class RideController {
 		return ResponseEntity.ok(GeoService.getFeatureCollection(rideService.getIntersectionEdge(rideId)));
 	}
 
-	@GetMapping("/{intersectionBaseId}/intersection_base/properties")
+	@GetMapping("/{intersectionBaseId}/intersection_base")
 	public ResponseEntity<Map<String, Object>> getIntersectionBaseAsGeoJson(@PathVariable Long intersectionBaseId) {
 		return rideService.getIntersectionBase(intersectionBaseId)
-			.map(base -> ResponseEntity.ok(base.getProperties()))
+			.map(base -> ResponseEntity.ok(GeoService.getFeatureCollection(List.of(base))))
 			.orElseGet(() -> ResponseEntity.ok(null));
 	}
 
@@ -79,14 +81,21 @@ public class RideController {
 
 	@GetMapping("/intersection_nodes/aggregate")
 	public ResponseEntity<Map<String, Object>> getIntersectionNodesAggregateAsGeoJsonPageable(
-			@RequestParam(required = false) Long trafficSignalClusterId,
-			@RequestParam(required = false) Long numberOfRides, @RequestParam(required = false) String region,
+			@RequestParam Boolean properties, @RequestParam(required = false) Long trafficSignalClusterId,
+			@RequestParam(required = false) Long startValhallaEdgeId,
+			@RequestParam(required = false) Long endValhallaEdgeId, @RequestParam(required = false) Long numberOfRides,
+			@RequestParam(required = false) String region, @RequestParam(required = false) Long regionId,
 			@RequestParam(required = false) String streetNames, @RequestParam(required = false) WeekDays weekDay,
 			@RequestParam(required = false) TrafficTimes trafficTime, @RequestParam(required = false) Integer year,
 			Pageable pageable) {
 
-		return ResponseEntity.ok(rideService.getIntersectionNodeMetricsPageable(trafficSignalClusterId, numberOfRides,
-				region, streetNames, weekDay, trafficTime, year, pageable));
+		Page<IntersectionNodeMetrics> nodes = rideService.getIntersectionNodeMetricsPageable(trafficSignalClusterId,
+				startValhallaEdgeId, endValhallaEdgeId, numberOfRides, region, regionId, streetNames, weekDay,
+				trafficTime, year, pageable);
+		if (properties) {
+			return ResponseEntity.ok(GeoService.getPropertiesCollectionPageable(nodes));
+		}
+		return ResponseEntity.ok(GeoService.getFeatureCollectionPageable(nodes));
 	}
 
 	@GetMapping("/intersection_nodes/streetNames")
@@ -115,13 +124,21 @@ public class RideController {
 	}
 
 	@GetMapping("/intersection_edges/aggregate")
-	public ResponseEntity<Map<String, Object>> getIntersectionEdgesAsGeoJsonPageable(
-			@RequestParam(required = false) Long osmId, @RequestParam(required = false) Long numberOfRides,
-			@RequestParam(required = false) String region, @RequestParam(required = false) String name,
-			@RequestParam(required = false) WeekDays weekDay, @RequestParam(required = false) TrafficTimes trafficTime,
-			@RequestParam(required = false) Integer year, Pageable pageable) {
-		return ResponseEntity.ok(rideService.getIntersectionEdgeMetricsPageable(osmId, numberOfRides, region, name,
-				weekDay, trafficTime, year, pageable));
+	public ResponseEntity<Map<String, Object>> getIntersectionEdgesAsGeoJsonPageable(@RequestParam Boolean properties,
+			@RequestParam(required = false) Long osmId, @RequestParam(required = false) Long valhallaEdgeId,
+			@RequestParam(required = false) Long prevValhallaEdgeId,
+			@RequestParam(required = false) Long nextValhallaEdgeId, @RequestParam(required = false) Long numberOfRides,
+			@RequestParam(required = false) String region, @RequestParam(required = false) Long regionId,
+			@RequestParam(required = false) String name, @RequestParam(required = false) WeekDays weekDay,
+			@RequestParam(required = false) TrafficTimes trafficTime, @RequestParam(required = false) Integer year,
+			Pageable pageable) {
+		Page<IntersectionEdgeMetrics> edges = rideService.getIntersectionEdgeMetricsPageable(osmId, valhallaEdgeId,
+				prevValhallaEdgeId, nextValhallaEdgeId, numberOfRides, region, regionId, name, weekDay, trafficTime,
+				year, pageable);
+		if (properties) {
+			return ResponseEntity.ok(GeoService.getPropertiesCollectionPageable(edges));
+		}
+		return ResponseEntity.ok(GeoService.getFeatureCollectionPageable(edges));
 	}
 
 	@GetMapping("/intersection_edges/streetNames")

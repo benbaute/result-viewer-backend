@@ -83,10 +83,10 @@ public class RideService {
 	}
 
 	public Page<IntersectionEdge> getIntersectionEdgesPageable(Long osmId, Long valhallaEdgeId, Long prevValhallaEdgeId,
-			Long nextValhallaEdgeIdLong, Long regionId, TrafficTimes trafficTime, WeekDays weekDay, Integer year,
+			Long nextValhallaEdgeId, Long regionId, TrafficTimes trafficTime, WeekDays weekDay, Integer year,
 			Date startDate, Date endDate, Pageable pageable) {
 		Specification<IntersectionEdge> spec = Specification.where(IntersectionEdgeSpecifications.hasOsmId(osmId))
-			.and(IntersectionEdgeSpecifications.isSegment(valhallaEdgeId, prevValhallaEdgeId, nextValhallaEdgeIdLong))
+			.and(IntersectionEdgeSpecifications.isSegment(valhallaEdgeId, prevValhallaEdgeId, nextValhallaEdgeId))
 			.and(IntersectionBaseSpecifications.hasRegion(regionId))
 			.and(TimeSpecifications.hasWeekDayBase(weekDay))
 			.and(TimeSpecifications.hasTrafficTimeBase(trafficTime))
@@ -95,20 +95,22 @@ public class RideService {
 		return intersectionEdgeRepository.findAll(spec, pageable);
 	}
 
-	public Map<String, Object> getIntersectionNodeMetricsPageable(Long trafficSignalClusterId, Long count,
-			String region, String streetNames, WeekDays weekDay, TrafficTimes trafficTime, Integer year,
-			Pageable pageable) {
+	public Page<IntersectionNodeMetrics> getIntersectionNodeMetricsPageable(Long trafficSignalClusterId,
+			Long startValhallaEdgeId, Long endValhallaEdgeId, Long count, String region, Long regionId,
+			String streetNames, WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
 		Specification<IntersectionNodeMetrics> spec = Specification
 			.where(IntersectionNodeMetricsSpecifications.hasTrafficSignalClusterId(trafficSignalClusterId))
+			.and(IntersectionNodeMetricsSpecifications.isSegment(startValhallaEdgeId, endValhallaEdgeId))
 			.and(IntersectionNodeMetricsSpecifications.hasName(streetNames))
 			.and(IntersectionBaseMetricsSpecifications.hasMinCount(count))
 			.and(IntersectionBaseMetricsSpecifications.hasRegion(region))
+			.and(IntersectionBaseMetricsSpecifications.hasRegionId(regionId))
 			.and(TimeSpecifications.hasWeekDayMetrics(weekDay))
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return GeoService.getFeatureCollectionPageable(intersectionNodeMetricsRepository.findAll(spec, pageable));
+		return intersectionNodeMetricsRepository.findAll(spec, pageable);
 	}
 
 	public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId, Long count,
@@ -116,19 +118,23 @@ public class RideService {
 		return intersectionNodeRepository.findAllIncludingString(trafficSignalClusterId, count, region, streetNames);
 	}
 
-	public Map<String, Object> getIntersectionEdgeMetricsPageable(Long osmId, Long count, String region, String name,
+	public Page<IntersectionEdgeMetrics> getIntersectionEdgeMetricsPageable(Long osmId, Long valhallaEdgeId,
+			Long prevValhallaEdgeId, Long nextValhallaEdgeId, Long count, String region, Long regionId, String name,
 			WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
 		Specification<IntersectionEdgeMetrics> spec = Specification
 			.where(IntersectionEdgeMetricsSpecifications.hasOsmId(osmId))
+			.and(IntersectionEdgeMetricsSpecifications.isSegment(valhallaEdgeId, prevValhallaEdgeId,
+					nextValhallaEdgeId))
 			.and(IntersectionEdgeMetricsSpecifications.hasName(name))
 			.and(IntersectionBaseMetricsSpecifications.hasMinCount(count))
 			.and(IntersectionBaseMetricsSpecifications.hasRegion(region))
+			.and(IntersectionBaseMetricsSpecifications.hasRegionId(regionId))
 			.and(TimeSpecifications.hasWeekDayMetrics(weekDay))
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return GeoService.getFeatureCollectionPageable(intersectionEdgeMetricsRepository.findAll(spec, pageable));
+		return intersectionEdgeMetricsRepository.findAll(spec, pageable);
 	}
 
 	public List<String> findAllStreetNamesIntersectionEdge(Long count, String region, String name) {
@@ -166,9 +172,9 @@ public class RideService {
 
 		Specification<IntersectionRideRegionMetrics> spec = Specification
 			.where(IntersectionRideRegionMetricsSpecifications.hasRegionId(regionId))
-			.and(TimeSpecifications.hasWeekDayMetrics(weekDay))
-			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
-			.and(TimeSpecifications.hasYearMetrics(year));
+			.and(TimeSpecifications.hasWeekDayBase(weekDay))
+			.and(TimeSpecifications.hasTrafficTimeBase(trafficTime))
+			.and(TimeSpecifications.hasYearBase(year));
 
 		return intersectionRideRegionMetricsRepository.findAll(spec, pageable);
 	}

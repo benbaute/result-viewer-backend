@@ -14,6 +14,7 @@ public interface IntersectionNodeRepository
 
 	List<IntersectionNode> findByRideId(Long rideId);
 
+	// TODO: replace with query on mqt
 	@Query(value = """
 			SELECT DISTINCT node.street_names
 			FROM (

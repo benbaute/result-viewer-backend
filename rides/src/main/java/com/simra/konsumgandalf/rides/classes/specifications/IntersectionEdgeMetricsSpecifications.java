@@ -15,4 +15,23 @@ public class IntersectionEdgeMetricsSpecifications {
 				: cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%");
 	}
 
+	public static Specification<IntersectionEdgeMetrics> isSegment(Long valhallaEdgeId, Long prevValhallaEdgeId,
+			Long nextValhallaEdgeId) {
+		return (root, query, cb) -> {
+			if (valhallaEdgeId == null && prevValhallaEdgeId == null && nextValhallaEdgeId == null) {
+				return cb.conjunction();
+			}
+
+			return cb.and(
+					prevValhallaEdgeId == null ? cb.isNull(root.get("prevValhallaEdgeId"))
+							: cb.equal(root.get("prevValhallaEdgeId"), prevValhallaEdgeId),
+
+					valhallaEdgeId == null ? cb.isNull(root.get("valhallaEdgeId"))
+							: cb.equal(root.get("valhallaEdgeId"), valhallaEdgeId),
+
+					nextValhallaEdgeId == null ? cb.isNull(root.get("nextValhallaEdgeId"))
+							: cb.equal(root.get("nextValhallaEdgeId"), nextValhallaEdgeId));
+		};
+	}
+
 }

@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.rides.classes.specifications;
 
+import com.simra.konsumgandalf.common.models.entities.IntersectionBase;
 import com.simra.konsumgandalf.common.models.entities.IntersectionBaseMetrics;
 import com.simra.konsumgandalf.common.models.entities.Region;
 import jakarta.persistence.criteria.Join;
@@ -14,6 +15,25 @@ public class IntersectionBaseMetricsSpecifications {
 				: cb.greaterThanOrEqualTo(root.get("numberOfRides"), count);
 	}
 
+	public static <T extends IntersectionBaseMetrics> Specification<T> hasRegionId(Long regionId) {
+		return (root, query, cb) -> {
+			if (regionId == null) {
+				return cb.conjunction();
+			}
+
+			assert query != null;
+			Subquery<Long> subquery = query.subquery(Long.class);
+			Root<IntersectionBase> base = subquery.from(IntersectionBase.class);
+
+			Join<IntersectionBase, Region> regionJoin = base.join("regions");
+
+			subquery.select(cb.literal(1L))
+				.where(cb.equal(base.get("id"), root.get("exampleId")), cb.equal(regionJoin.get("id"), regionId));
+
+			return cb.exists(subquery);
+		};
+	}
+
 	public static <T extends IntersectionBaseMetrics> Specification<T> hasRegion(String regionName) {
 		return (root, query, cb) -> {
 			if (regionName == null) {
@@ -22,14 +42,12 @@ public class IntersectionBaseMetricsSpecifications {
 
 			assert query != null;
 			Subquery<Long> subquery = query.subquery(Long.class);
-			Root<IntersectionBaseMetrics> base = subquery.from(IntersectionBaseMetrics.class);
+			Root<IntersectionBase> base = subquery.from(IntersectionBase.class);
 
-			Join<IntersectionBaseMetrics, Region> region = base.join("regions");
+			Join<IntersectionBase, Region> regionJoin = base.join("regions");
 
 			subquery.select(cb.literal(1L))
-				.where(cb.equal(base.get("id"), root.get("exampleId")),
-						// TODO: replace with region id, requires frontend changes
-						cb.equal(region.get("name"), regionName));
+				.where(cb.equal(base.get("id"), root.get("exampleId")), cb.equal(regionJoin.get("name"), regionName));
 
 			return cb.exists(subquery);
 		};

@@ -36,20 +36,44 @@ public class IntersectionRegionMetrics extends TimeBaseClass implements FeatureM
 	@Column(name = "number_of_edges")
 	private int numberOfEdges;
 
+	@Column(name = "edge_length_km")
+	private double edgeLength;
+
+	@Column(name = "edge_duration")
+	private double edgeDuration;
+
+	@Column(name = "edge_waiting_time")
+	private double edgeWaitingTime;
+
+	@Column(name = "edge_median_waiting_time")
+	private double edgeMedianWaitingTime;
+
+	@Column(name = "edge_waiting_s_per_km")
+	private double edgeWaitingSPerKm;
+
 	@Column(name = "number_of_nodes")
 	private int numberOfNodes;
+
+	@Column(name = "node_length_km")
+	private double nodeLength;
+
+	@Column(name = "node_duration")
+	private double nodeDuration;
+
+	@Column(name = "node_waiting_time")
+	private double nodeWaitingTime;
 
 	@Column(name = "node_median_waiting_time")
 	private double nodeMedianWaitingTime;
 
-	@Column(name = "length_km")
-	private double length; // km
-
 	@Column(name = "node_waiting_s_per_km")
-	private double nodeWaitingSPerKm; // s/km
+	private double nodeWaitingSPerKm;
 
-	@Column(name = "edge_waiting_s_per_km")
-	private double edgeWaitingSPerKm; // s/km
+	@Column(name = "length_km")
+	private double length;
+
+	@Column(name = "duration")
+	private double duration;
 
 	@Override
 	public Map<String, Object> getProperties() {
@@ -59,11 +83,23 @@ public class IntersectionRegionMetrics extends TimeBaseClass implements FeatureM
 		properties.put("adminLevel", adminLevel);
 		properties.put("numberOfRides", numberOfRides);
 		properties.put("numberOfEdges", numberOfEdges);
-		properties.put("numberOfNodes", numberOfNodes);
-		properties.put("nodeMedianWaitingTime", nodeMedianWaitingTime);
-		properties.put("length", length);
-		properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
+		properties.put("edgeLength", edgeLength);
+		properties.put("edgeDuration", edgeDuration);
+		properties.put("edgeWaitingTime", edgeWaitingTime);
+		properties.put("edgeMedianWaitingTime", edgeMedianWaitingTime);
 		properties.put("edgeWaitingSPerKm", edgeWaitingSPerKm);
+		properties.put("numberOfNodes", numberOfNodes);
+		properties.put("nodeLength", nodeLength);
+		properties.put("nodeDuration", nodeDuration);
+		properties.put("nodeWaitingTime", nodeWaitingTime);
+		properties.put("nodeMedianWaitingTime", nodeMedianWaitingTime);
+		properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
+		properties.put("length", length);
+		properties.put("duration", duration);
+
+		properties.put("nodesPerKm", numberOfNodes / length);
+		properties.put("nodeWaitingRate", 100 * nodeWaitingTime / duration);
+
 		return properties;
 	}
 
