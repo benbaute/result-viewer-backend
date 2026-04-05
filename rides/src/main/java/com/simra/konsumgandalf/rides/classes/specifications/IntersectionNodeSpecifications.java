@@ -1,8 +1,6 @@
 package com.simra.konsumgandalf.rides.classes.specifications;
 
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
-import com.simra.konsumgandalf.common.models.entities.TrafficSignalCluster;
-import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
 public class IntersectionNodeSpecifications {
@@ -13,8 +11,7 @@ public class IntersectionNodeSpecifications {
 				return cb.conjunction();
 			}
 
-			Join<IntersectionNode, TrafficSignalCluster> tJoin = root.join("trafficSignalCluster");
-			return cb.equal(tJoin.get("id"), trafficSignalClusterId);
+			return cb.equal(root.get("trafficSignalCluster").get("id"), trafficSignalClusterId);
 		};
 	}
 

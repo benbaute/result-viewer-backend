@@ -84,7 +84,10 @@ CREATE INDEX IF NOT EXISTS traffic_signal_geom25833_idx ON traffic_signal USING 
 CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signal_cluster USING GIST (geom3857);
 CREATE INDEX IF NOT EXISTS region_geom_3857_idx ON region USING GIST (geom3857);
 
+CREATE INDEX IF NOT EXISTS idx_intersection__matched_points_m ON intersection__matched_points (matched_point_id);
+CREATE INDEX IF NOT EXISTS idx_intersection__matched_points_i ON intersection__matched_points (intersection_id);
 
+CREATE INDEX IF NOT EXISTS base_time ON intersection_base (week_day, traffic_time, year);
 CREATE INDEX IF NOT EXISTS base_ride ON intersection_base (ride_id);
 CREATE INDEX IF NOT EXISTS matched_point_ride ON matched_point(ride_id);
 CREATE INDEX IF NOT EXISTS ride_point_ride ON ride_point(ride_id);
@@ -94,7 +97,7 @@ CREATE INDEX IF NOT EXISTS node_valhalla ON intersection_node (start_valhalla_ed
 
 CREATE INDEX IF NOT EXISTS edge_osm_id ON intersection_edge (prev_osm_id, osm_id, next_osm_id);
 CREATE INDEX IF NOT EXISTS edge_valhalla ON
-    intersection_edge (prev_valhalla_edge_id, valhalla_edge_id, next_valhalla_edge_id);
+    intersection_edge (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id);
 
 
 CREATE INDEX IF NOT EXISTS traffic_signal_geom4326_idx ON traffic_signal USING GIST (geom);
@@ -440,7 +443,19 @@ CREATE INDEX IF NOT EXISTS safety_metrics__simra_region_id
     ON safety_metrics__simra_region (name);
 
 
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_edge_metrics AS
+/* TODO: this does not work, it takes to much time to complete
+WITH global_examples AS (
+    SELECT
+        valhalla_edge_id,
+        prev_valhalla_edge_id,
+        next_valhalla_edge_id,
+        MIN(id) AS global_example_id
+    FROM intersection_edge
+    GROUP BY valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id
+)
+*/
 SELECT
     row_number() OVER () AS id, -- primary key for hibernate
     agg.valhalla_edge_id,
@@ -453,6 +468,7 @@ SELECT
 
     example_base.geom AS geom,
     example_id,
+    -- global_example_id,
     line.name AS name,
 
     example.osm_id,
@@ -460,11 +476,13 @@ SELECT
     example.next_osm_id,
 
     agg.number_of_rides,
-    agg.median_length,
-    agg.median_duration,
-    agg.median_speed,
+    agg.avg_length,
+    agg.avg_speed,
+    agg.avg_duration,
+    agg.avg_waiting,
     agg.max_waiting_time,
-    agg.median_waiting_time
+    agg.stop_rate,
+    agg.avg_waiting_when_stopped
 FROM (
          SELECT
              valhalla_edge_id,
@@ -474,15 +492,21 @@ FROM (
              COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
              COALESCE(year, 2000)                AS year,         -- aggregation number for years
 
-             COUNT(*) AS number_of_rides,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY length DESC) AS median_length,
              MIN(base.id) AS example_id,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY speed DESC) AS median_speed,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY duration DESC) AS median_duration,
+
+             COUNT(*) AS number_of_rides,
+             AVG(length) AS avg_length,
+             AVG(speed) AS avg_speed,
+             AVG(duration) AS avg_duration,
+             AVG(waiting_time) AS avg_waiting,
              MAX(waiting_time) AS max_waiting_time,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS median_waiting_time
+
+             100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS stop_rate,
+             COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS avg_waiting_when_stopped
+
          FROM intersection_edge edge
          JOIN intersection_base base ON edge.id = base.id
+
          GROUP BY GROUPING SETS (
              (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id),
              (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, year),
@@ -494,17 +518,30 @@ FROM (
              (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time, year)
              )
      ) agg
-         JOIN intersection_edge example ON example.id = agg.example_id
-         JOIN intersection_base example_base ON example.id = example_base.id
-         LEFT JOIN planet_osm_line line ON line.osm_id = example.osm_id
+/*
+JOIN global_examples g ON
+    g.valhalla_edge_id IS NOT DISTINCT FROM agg.valhalla_edge_id AND
+    g.prev_valhalla_edge_id IS NOT DISTINCT FROM agg.prev_valhalla_edge_id AND
+    g.next_valhalla_edge_id IS NOT DISTINCT FROM agg.next_valhalla_edge_id
+*/
+JOIN intersection_edge example ON example.id = agg.example_id
+JOIN intersection_base example_base ON example.id = example_base.id
+LEFT JOIN planet_osm_line line ON line.osm_id = example.osm_id
 ;
-CREATE UNIQUE INDEX IF NOT EXISTS intersection_edge_metrics_pk
-    ON intersection_edge_metrics (valhalla_edge_id, prev_valhalla_edge_id, next_valhalla_edge_id, week_day, traffic_time, year);
-CREATE INDEX IF NOT EXISTS intersection_edge_query ON intersection_edge_metrics(week_day, traffic_time, year, number_of_rides);
-CREATE INDEX IF NOT EXISTS intersection_edge_metrics_geom4326_idx ON intersection_edge_metrics USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_intersection_edge_time ON intersection_edge_metrics(week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS idx_intersection_edge_metrics_geom4326 ON intersection_edge_metrics USING GIST (geom);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_node_metrics AS
+WITH global_examples AS (
+    SELECT
+        traffic_signal_cluster_id,
+        start_valhalla_edge_id,
+        end_valhalla_edge_id,
+        MIN(id) AS global_example_id
+    FROM intersection_node
+    GROUP BY traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id
+)
 SELECT
     row_number() OVER () AS id, -- primary key for hibernate
     agg.traffic_signal_cluster_id,
@@ -517,6 +554,7 @@ SELECT
 
     example_base.geom AS geom,
     example_id,
+    global_example_id,
     sl.name AS start_name,
     el.name AS end_name,
     example.street_names,
@@ -525,27 +563,34 @@ SELECT
     example.end_osm_id,
 
     agg.number_of_rides,
-    agg.median_length,
-    agg.median_duration,
-    agg.median_speed,
+    agg.avg_length,
+    agg.avg_speed,
+    agg.avg_duration,
+    agg.avg_waiting,
     agg.max_waiting_time,
-    agg.median_waiting_time
+    agg.stop_rate,
+    agg.avg_waiting_when_stopped
 FROM (
          SELECT
              traffic_signal_cluster_id,
-             start_valhalla_edge_id,
-             end_valhalla_edge_id,
+             start_valhalla_edge_id AS start_valhalla_edge_id, -- map null to -1 for quick integer grouping
+             end_valhalla_edge_id AS end_valhalla_edge_id,
              COALESCE(week_day, 'ALL_WEEK')      AS week_day,     -- aggregation name for week
              COALESCE(traffic_time, 'ALL_DAY')   AS traffic_time, -- aggregation name for traffic time
              COALESCE(year, 2000)                AS year,         -- aggregation number for years
 
-             COUNT(*) AS number_of_rides,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY length DESC) AS median_length,
              MIN(base.id) AS example_id,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY speed DESC) AS median_speed,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY duration DESC) AS median_duration,
+
+             COUNT(*) AS number_of_rides,
+             AVG(length) AS avg_length,
+             AVG(speed) AS avg_speed,
+             AVG(duration) AS avg_duration,
+             AVG(waiting_time) AS avg_waiting,
              MAX(waiting_time) AS max_waiting_time,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS median_waiting_time
+
+             100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS stop_rate,
+             COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS avg_waiting_when_stopped
+
          FROM intersection_node node
          JOIN intersection_base base ON node.id = base.id
          GROUP BY GROUPING SETS (
@@ -559,15 +604,18 @@ FROM (
              (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time, year)
              )
      ) agg
-         JOIN intersection_node example ON example.id = agg.example_id
-         JOIN intersection_base example_base ON example.id = example_base.id
-         LEFT JOIN planet_osm_line sl ON sl.osm_id = example.start_osm_id
-         LEFT JOIN planet_osm_line el ON el.osm_id = example.end_osm_id
+JOIN global_examples g ON
+    g.traffic_signal_cluster_id = agg.traffic_signal_cluster_id AND
+    g.start_valhalla_edge_id IS NOT DISTINCT FROM agg.start_valhalla_edge_id AND
+    g.end_valhalla_edge_id IS NOT DISTINCT FROM agg.end_valhalla_edge_id
+JOIN intersection_node example ON example.id = agg.example_id
+JOIN intersection_base example_base ON example.id = example_base.id
+LEFT JOIN planet_osm_line sl ON sl.osm_id = example.start_osm_id
+LEFT JOIN planet_osm_line el ON el.osm_id = example.end_osm_id
 ;
-CREATE UNIQUE INDEX IF NOT EXISTS intersection_node_metrics_pk
-    ON intersection_node_metrics (traffic_signal_cluster_id, start_valhalla_edge_id, end_valhalla_edge_id, week_day, traffic_time, year);
-CREATE INDEX IF NOT EXISTS intersection_node_query ON intersection_node_metrics(week_day, traffic_time, year, number_of_rides);
-CREATE INDEX IF NOT EXISTS intersection_node_metrics_geom4326_idx ON intersection_node_metrics USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_intersection_node_metrics_traffic_signal ON intersection_node_metrics(traffic_signal_cluster_id);
+CREATE INDEX IF NOT EXISTS idx_intersection_node_time ON intersection_node_metrics(week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS idx_intersection_node_metrics_geom4326 ON intersection_node_metrics USING GIST (geom);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS
@@ -579,10 +627,12 @@ WITH edges AS (
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_edges,
         COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
-        SUM(length) / 1000                                             AS edge_length_km,
+        SUM(length) / 1000.0                                           AS edge_length_km,
         SUM(duration)                                                  AS edge_duration,
         SUM(waiting_time)                                              AS edge_waiting_time,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
+        AVG(waiting_time)                                              AS edge_avg_waiting_time,
+        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS edge_stop_rate,
+        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS edge_avg_waiting_when_stopped
     FROM intersection_edge edge
     JOIN intersection_base base ON edge.id = base.id
     JOIN intersection__region ir ON base.id = ir.intersection_id
@@ -604,10 +654,12 @@ WITH edges AS (
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_nodes,
         COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
-        SUM(length) / 1000                                             AS node_length_km,
+        SUM(length) / 1000.0                                           AS node_length_km,
         SUM(duration)                                                  AS node_duration,
         SUM(waiting_time)                                              AS node_waiting_time,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
+        AVG(waiting_time)                                              AS node_avg_waiting_time,
+        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS node_stop_rate,
+        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS node_avg_waiting_when_stopped
     FROM intersection_node node
     JOIN intersection_base base ON node.id = base.id
     JOIN intersection__region ir ON base.id = ir.intersection_id
@@ -632,24 +684,32 @@ SELECT
     name,
     admin_level,
     e.number_of_rides,
+
+    edge_length_km + node_length_km AS length_km,
+    edge_duration + node_duration AS duration,
     
     e.number_of_edges,
     e.edge_length_km,
     e.edge_duration,
     e.edge_waiting_time,
-    e.edge_median_waiting_time,
+    e.edge_avg_waiting_time,
+    e.edge_avg_waiting_when_stopped,
+    e.edge_stop_rate,
+
+    edge_waiting_time / (edge_length_km + node_length_km) AS edge_waiting_s_per_km,
+    100::float8 * edge_waiting_time / (edge_duration + node_duration) AS edge_waiting_rate,
 
     n.number_of_nodes,
     n.node_length_km,
     n.node_duration,
     n.node_waiting_time,
-    n.node_median_waiting_time,
-
-    edge_length_km + node_length_km AS length_km,
-    edge_duration + node_duration AS duration,
+    n.node_avg_waiting_time,
+    n.node_avg_waiting_when_stopped,
+    n.node_stop_rate,
 
     node_waiting_time / (edge_length_km + node_length_km) AS node_waiting_s_per_km,
-    edge_waiting_time / (edge_length_km + node_length_km) AS edge_waiting_s_per_km
+    100::float8 * node_waiting_time / (edge_duration + node_duration) AS node_waiting_rate
+
 FROM region
 JOIN nodes n ON region.id = n.region_id
 JOIN edges e ON region.id = e.region_id
@@ -657,8 +717,8 @@ AND n.week_day = e.week_day
 AND n.traffic_time = e.traffic_time
 AND n.year = e.year
 ;
-CREATE UNIQUE INDEX IF NOT EXISTS intersection_region_metrics_pk
-    ON intersection_region_metrics (region_id, week_day, traffic_time, year);
+CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_id ON intersection_region_metrics (region_id);
+CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_time ON intersection_region_metrics (week_day, traffic_time, year);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_ride_region_metrics AS
@@ -668,10 +728,12 @@ WITH edges AS (
         base.ride_id,
         MIN(base.id)                                                   AS first_id,
         COUNT(*)                                                       AS number_of_edges,
-        SUM(length) / 1000                                             AS edge_length_km,
+        SUM(length) / 1000.0                                             AS edge_length_km,
         SUM(duration)                                                  AS edge_duration,
         SUM(waiting_time)                                              AS edge_waiting_time,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS edge_median_waiting_time
+        AVG(waiting_time)                                              AS edge_avg_waiting_time,
+        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS edge_stop_rate,
+        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS edge_avg_waiting_when_stopped
     FROM intersection_edge edge
     JOIN intersection_base base ON edge.id = base.id
     JOIN intersection__region ir ON base.id = ir.intersection_id
@@ -684,7 +746,9 @@ WITH edges AS (
         SUM(length) / 1000                                             AS node_length_km,
         SUM(duration)                                                  AS node_duration,
         SUM(waiting_time)                                              AS node_waiting_time,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY waiting_time DESC) AS node_median_waiting_time
+        AVG(waiting_time)                                              AS node_avg_waiting_time,
+        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS node_stop_rate,
+        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS node_avg_waiting_when_stopped
     FROM intersection_node node
     JOIN intersection_base base ON node.id = base.id
     JOIN intersection__region ir ON base.id = ir.intersection_id
@@ -701,20 +765,31 @@ SELECT
     name,
     admin_level,
 
+    edge_length_km + COALESCE(node_length_km, 0) AS length_km,
+    edge_duration + COALESCE(node_duration, 0) AS duration,
+    b.median_speed AS median_ride_speed,
+
     e.number_of_edges,
     e.edge_length_km,
     e.edge_duration,
     e.edge_waiting_time,
-    e.edge_median_waiting_time,
+    e.edge_avg_waiting_time,
+    e.edge_avg_waiting_when_stopped,
+    e.edge_stop_rate,
 
-    COALESCE(n.number_of_nodes, 0)          AS number_of_nodes,
-    COALESCE(n.node_length_km, 0)           AS node_length_km,
-    COALESCE(n.node_duration, 0)            AS node_duration,
-    COALESCE(n.node_waiting_time, 0)        AS node_waiting_time,
-    COALESCE(n.node_median_waiting_time, 0) AS node_median_waiting_time,
+    edge_waiting_time / (edge_length_km + COALESCE(node_length_km, 0)) AS edge_waiting_s_per_km,
+    100 * edge_waiting_time / (edge_duration + COALESCE(node_duration, 0)) AS edge_waiting_rate,
 
-    edge_length_km + COALESCE(node_length_km, 0) AS length_km,
-    edge_duration + COALESCE(node_duration, 0) AS duration
+    COALESCE(n.number_of_nodes, 0)::float8                  AS number_of_nodes,
+    COALESCE(n.node_length_km, 0)::float8                   AS node_length_km,
+    COALESCE(n.node_duration, 0)::float8                    AS node_duration,
+    COALESCE(n.node_waiting_time, 0)::float8                AS node_waiting_time,
+    COALESCE(n.node_avg_waiting_time, 0)::float8            AS node_avg_waiting_time,
+    COALESCE(n.node_avg_waiting_when_stopped, 0)::float8    AS node_avg_waiting_when_stopped,
+    COALESCE(n.node_stop_rate, 0)::float8                   AS node_stop_rate,
+
+    COALESCE(node_avg_waiting_time / (edge_length_km + node_length_km), 0)::float8  AS node_waiting_s_per_km,
+    COALESCE(100 * node_waiting_time / (edge_duration + node_duration), 0)::float8  AS node_waiting_rate
 FROM region
 JOIN edges e ON region.id = e.region_id  -- Full Join, only include rows with at least one edge
 LEFT JOIN nodes n ON region.id = n.region_id AND n.ride_id = e.ride_id -- Nodes not required

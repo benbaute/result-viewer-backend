@@ -13,7 +13,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class RideService {
@@ -147,13 +150,13 @@ public class RideService {
 		return GeoService.getPageableMap(pages, "ids", pages.getContent().stream().map(Ride::getId).toList());
 	}
 
-	public List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(Long numberOfRides, WeekDays weekDay,
-			TrafficTimes trafficTime, Integer year) {
-		return intersectionRegionMetricsRepository.getIntersectionRegionMetricsComplete(numberOfRides,
+	public List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(Long numberOfRides, Integer adminLevel,
+			WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+		return intersectionRegionMetricsRepository.getIntersectionRegionMetricsComplete(numberOfRides, adminLevel,
 				weekDay.toString(), trafficTime.toString(), year);
 	}
 
-	public Map<String, Object> getIntersectionRegionMetricsPageable(Long regionId, Integer adminLevel,
+	public Page<IntersectionRegionMetrics> getIntersectionRegionMetricsPageable(Long regionId, Integer adminLevel,
 			Long numberOfRides, WeekDays weekDay, TrafficTimes trafficTime, Integer year, Pageable pageable) {
 
 		Specification<IntersectionRegionMetrics> spec = Specification
@@ -164,7 +167,7 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return GeoService.getFeatureCollectionPageable(intersectionRegionMetricsRepository.findAll(spec, pageable));
+		return intersectionRegionMetricsRepository.findAll(spec, pageable);
 	}
 
 	public Page<IntersectionRideRegionMetrics> getIntersectionRideRegionMetricsPageable(Long regionId, WeekDays weekDay,
@@ -185,21 +188,26 @@ public class RideService {
 
 	public List<MatchedPoint> getMatchedPointsByBaseId(Long id) {
 		IntersectionBase base = intersectionBaseRepository.findById(id).orElse(null);
-		if (base == null) {
-			return Collections.emptyList();
+		List<MatchedPoint> matchedPoints = matchedPointRepository.findByIntersectionBaseId(id);
+		if (base != null && base.getPrevIntersectionId() != null) {
+			matchedPoints.addAll(matchedPointRepository.findByIntersectionBaseId(base.getPrevIntersectionId()));
 		}
-		List<MatchedPoint> matchedPoints = base.getMatchedPoints();
-		if (base.getPrevIntersection() != null) {
-			matchedPoints.addAll(base.getPrevIntersection().getMatchedPoints());
-		}
-		if (base.getNextIntersection() != null) {
-			matchedPoints.addAll(base.getNextIntersection().getMatchedPoints());
-		}
+		Optional<IntersectionBase> nextIntersection = intersectionBaseRepository.findByPrevIntersectionId(id);
+		nextIntersection.ifPresent(intersectionBase -> matchedPoints
+			.addAll((matchedPointRepository.findByIntersectionBaseId(intersectionBase.getId()))));
 		return matchedPoints;
 	}
 
 	public List<RidePoint> getRidePointsByBaseId(Long id) {
-		return getMatchedPointsByBaseId(id).stream().map(MatchedPoint::getRidePoint).toList();
+		IntersectionBase base = intersectionBaseRepository.findById(id).orElse(null);
+		List<RidePoint> ridePoints = ridePointRepository.findByIntersectionBaseId(id);
+		if (base != null && base.getPrevIntersectionId() != null) {
+			ridePoints.addAll(ridePointRepository.findByIntersectionBaseId(base.getPrevIntersectionId()));
+		}
+		Optional<IntersectionBase> nextIntersection = intersectionBaseRepository.findByPrevIntersectionId(id);
+		nextIntersection.ifPresent(intersectionBase -> ridePoints
+			.addAll((ridePointRepository.findByIntersectionBaseId(intersectionBase.getId()))));
+		return ridePoints;
 	}
 
 	public byte[] getNodeMetricsTile(int z, int x, int y, Long numberOfRides, String weekDay, String trafficTime,

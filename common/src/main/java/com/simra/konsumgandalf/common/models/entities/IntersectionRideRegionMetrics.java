@@ -31,6 +31,15 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Prop
 	@Column(name = "admin_level")
 	private int adminLevel;
 
+	@Column(name = "median_ride_speed")
+	private double medianRideSpeed;
+
+	@Column(name = "length_km")
+	private double length;
+
+	@Column(name = "duration")
+	private double duration;
+
 	@Column(name = "number_of_edges")
 	private int numberOfEdges;
 
@@ -43,8 +52,20 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Prop
 	@Column(name = "edge_waiting_time")
 	private double edgeWaitingTime;
 
-	@Column(name = "edge_median_waiting_time")
-	private double edgeMedianWaitingTime;
+	@Column(name = "edge_avg_waiting_time")
+	private double edgeAvgWaitingTime;
+
+	@Column(name = "edge_avg_waiting_when_stopped")
+	private double edgeAvgWaitingTimeWhenStopped;
+
+	@Column(name = "edge_stop_rate")
+	private double edgeStopRate;
+
+	@Column(name = "edge_waiting_s_per_km")
+	private double edgeWaitingSPerKm;
+
+	@Column(name = "edge_waiting_rate")
+	private double edgeWaitingRate;
 
 	@Column(name = "number_of_nodes")
 	private int numberOfNodes;
@@ -58,14 +79,20 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Prop
 	@Column(name = "node_waiting_time")
 	private double nodeWaitingTime;
 
-	@Column(name = "node_median_waiting_time")
-	private double nodeMedianWaitingTime;
+	@Column(name = "node_avg_waiting_time")
+	private double nodeAvgWaitingTime;
 
-	@Column(name = "length_km")
-	private double length;
+	@Column(name = "node_avg_waiting_when_stopped")
+	private double nodeAvgWaitingTimeWhenStopped;
 
-	@Column(name = "duration")
-	private double duration;
+	@Column(name = "node_stop_rate")
+	private double nodeStopRate;
+
+	@Column(name = "node_waiting_s_per_km")
+	private double nodeWaitingSPerKm;
+
+	@Column(name = "node_waiting_rate")
+	private double nodeWaitingRate;
 
 	@Override
 	public Map<String, Object> getProperties() {
@@ -75,23 +102,31 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Prop
 		properties.put("startTime", startTime);
 		properties.put("name", name);
 		properties.put("adminLevel", adminLevel);
+		properties.put("medianRideSpeed", medianRideSpeed);
+		properties.put("length", length);
+		properties.put("duration", duration);
+
 		properties.put("numberOfEdges", numberOfEdges);
 		properties.put("edgeLength", edgeLength);
 		properties.put("edgeDuration", edgeDuration);
 		properties.put("edgeWaitingTime", edgeWaitingTime);
-		properties.put("edgeMedianWaitingTime", edgeMedianWaitingTime);
+		properties.put("edgeAvgWaitingTime", edgeAvgWaitingTime);
+		properties.put("edgeAvgWaitingTimeWhenStopped", edgeAvgWaitingTimeWhenStopped);
+		properties.put("edgeStopRate", edgeStopRate);
+		properties.put("edgeWaitingSPerKm", edgeWaitingSPerKm);
+		properties.put("edgeWaitingRate", edgeWaitingRate);
+
 		properties.put("numberOfNodes", numberOfNodes);
 		properties.put("nodeLength", nodeLength);
 		properties.put("nodeDuration", nodeDuration);
 		properties.put("nodeWaitingTime", nodeWaitingTime);
-		properties.put("nodeMedianWaitingTime", nodeMedianWaitingTime);
-		properties.put("length", length);
-		properties.put("duration", duration);
+		properties.put("nodeAvgWaitingTime", nodeAvgWaitingTime);
+		properties.put("nodeAvgWaitingTimeWhenStopped", nodeAvgWaitingTimeWhenStopped);
+		properties.put("nodeStopRate", nodeStopRate);
+		properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
+		properties.put("nodeWaitingRate", nodeWaitingRate);
 
 		properties.put("nodesPerKm", numberOfNodes / length);
-		properties.put("nodeWaitingRate", 100 * nodeWaitingTime / duration);
-		properties.put("nodeWaitingSPerKm", nodeWaitingTime / length);
-		properties.put("edgeWaitingSPerKm", edgeWaitingTime / length);
 
 		return properties;
 	}

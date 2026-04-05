@@ -18,36 +18,45 @@ public abstract class IntersectionBaseMetrics extends TimeBaseClass {
 	@Column(name = "geom", columnDefinition = "geometry(LineString,4326)")
 	private LineString geom;
 
-	@Column(name = "example_id")
-	private int exampleId;
+	// @Column(name = "example_id")
+	// private int exampleId; // TODO: add back if mqt fixed
 
 	@Column(name = "number_of_rides")
 	private int numberOfRides;
 
-	@Column(name = "median_length")
-	private double medianLength;
+	@Column(name = "avg_length")
+	private double avgLength;
 
-	@Column(name = "median_duration")
-	private double medianDuration;
+	@Column(name = "avg_duration")
+	private double avgDuration;
 
-	@Column(name = "median_speed")
-	private double medianSpeed;
+	@Column(name = "avg_speed")
+	private double avgSpeed;
 
 	@Column(name = "max_waiting_time")
 	private double maxWaitingTime;
 
-	@Column(name = "median_waiting_time")
-	private double medianWaitingTime;
+	@Column(name = "avg_waiting")
+	private double avgWaitingTime;
+
+	@Column(name = "stop_rate")
+	private double stopRate;
+
+	@Column(name = "avg_waiting_when_stopped")
+	private double avgWaitingTimeWhenStopped;
 
 	public Map<String, Object> getBaseProperties() {
 		Map<String, Object> properties = super.getBaseProperties();
-		properties.put("id", exampleId);
+		// properties.put("id", exampleId);
 		properties.put("numberOfRides", numberOfRides);
-		properties.put("medianLength", medianLength);
-		properties.put("medianDuration", medianDuration);
-		properties.put("medianSpeed", medianSpeed);
+		properties.put("avgLength", avgLength);
+		properties.put("avgDuration", avgDuration);
+		properties.put("avgSpeed", avgSpeed);
 		properties.put("maxWaitingTime", maxWaitingTime);
-		properties.put("medianWaitingTime", medianWaitingTime);
+		properties.put("avgWaitingTime", avgWaitingTime);
+		properties.put("stopRate", stopRate);
+		properties.put("avgWaitingTimeWhenStopped", avgWaitingTimeWhenStopped);
+
 		return properties;
 	}
 

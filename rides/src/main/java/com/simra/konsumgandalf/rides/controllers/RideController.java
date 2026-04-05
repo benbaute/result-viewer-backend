@@ -1,9 +1,6 @@
 package com.simra.konsumgandalf.rides.controllers;
 
-import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
-import com.simra.konsumgandalf.common.models.entities.IntersectionEdgeMetrics;
-import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
-import com.simra.konsumgandalf.common.models.entities.IntersectionNodeMetrics;
+import com.simra.konsumgandalf.common.models.entities.*;
 import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.common.utils.services.GeoService;
@@ -153,21 +150,25 @@ public class RideController {
 	}
 
 	@GetMapping("/regions/complete")
-	public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsComplete(
-			@RequestParam(required = false) Long numberOfRides, @RequestParam(required = false) WeekDays weekDay,
-			@RequestParam(required = false) TrafficTimes trafficTime, @RequestParam(required = false) Integer year) {
-		return ResponseEntity.ok(GeoService.getFeatureCollection(
-				rideService.getIntersectionRegionMetricsComplete(numberOfRides, weekDay, trafficTime, year)));
+	public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsComplete(@RequestParam Integer adminLevel,
+			@RequestParam Long numberOfRides, @RequestParam WeekDays weekDay, @RequestParam TrafficTimes trafficTime,
+			@RequestParam Integer year) {
+		return ResponseEntity.ok(GeoService.getFeatureCollection(rideService
+			.getIntersectionRegionMetricsComplete(numberOfRides, adminLevel, weekDay, trafficTime, year)));
 	}
 
 	@GetMapping("/regions/pageable")
-	public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsPageable(
+	public ResponseEntity<Map<String, Object>> getIntersectionRegionMetricsPageable(@RequestParam Boolean properties,
 			@RequestParam(required = false) Long regionId, @RequestParam(required = false) Integer adminLevel,
 			@RequestParam(required = false) Long numberOfRides, @RequestParam(required = false) WeekDays weekDay,
 			@RequestParam(required = false) TrafficTimes trafficTime, @RequestParam(required = false) Integer year,
 			Pageable pageable) {
-		return ResponseEntity.ok(rideService.getIntersectionRegionMetricsPageable(regionId, adminLevel, numberOfRides,
-				weekDay, trafficTime, year, pageable));
+		Page<IntersectionRegionMetrics> regions = rideService.getIntersectionRegionMetricsPageable(regionId, adminLevel,
+				numberOfRides, weekDay, trafficTime, year, pageable);
+		if (properties) {
+			return ResponseEntity.ok(GeoService.getPropertiesCollectionPageable(regions));
+		}
+		return ResponseEntity.ok(GeoService.getFeatureCollectionPageable(regions));
 	}
 
 	@GetMapping("/regions/rides")

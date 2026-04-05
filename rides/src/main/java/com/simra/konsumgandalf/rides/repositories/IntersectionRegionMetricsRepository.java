@@ -26,11 +26,13 @@ public interface IntersectionRegionMetricsRepository
 			SELECT *
 			FROM intersection_region_metrics
 			WHERE number_of_rides >= :numberOfRides
+			AND admin_level = :adminLevel
 			AND week_day = :weekDay
 			AND traffic_time = :trafficTime
 			AND year = :year
 			""", nativeQuery = true)
 	List<IntersectionRegionMetrics> getIntersectionRegionMetricsComplete(@Param("numberOfRides") Long numberOfRides,
-			@Param("weekDay") String weekDay, @Param("trafficTime") String trafficTime, @Param("year") Integer year);
+			@Param("adminLevel") Integer adminLevel, @Param("weekDay") String weekDay,
+			@Param("trafficTime") String trafficTime, @Param("year") Integer year);
 
 }

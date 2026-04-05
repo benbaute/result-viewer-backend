@@ -13,6 +13,9 @@ import java.util.Map;
 @org.hibernate.annotations.Subselect("select * from intersection_node_metrics")
 public class IntersectionNodeMetrics extends IntersectionBaseMetrics implements FeatureMappable {
 
+	@Column(name = "global_example_id")
+	private int exampleId;
+
 	@Column(name = "start_valhalla_edge_id")
 	private Long startValhallaEdgeId;
 
@@ -40,6 +43,7 @@ public class IntersectionNodeMetrics extends IntersectionBaseMetrics implements 
 	@Override
 	public Map<String, Object> getProperties() {
 		Map<String, Object> properties = this.getBaseProperties();
+		properties.put("id", exampleId);
 		properties.put("startValhallaEdgeId", startValhallaEdgeId);
 		properties.put("endValhallaEdgeId", endValhallaEdgeId);
 		properties.put("startOsmId", startOsmId);

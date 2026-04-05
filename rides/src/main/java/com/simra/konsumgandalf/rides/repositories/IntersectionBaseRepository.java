@@ -5,8 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface IntersectionBaseRepository
 		extends JpaRepository<IntersectionBase, Long>, JpaSpecificationExecutor<IntersectionBase> {
+
+	Optional<IntersectionBase> findByPrevIntersectionId(Long prevId);
 
 }

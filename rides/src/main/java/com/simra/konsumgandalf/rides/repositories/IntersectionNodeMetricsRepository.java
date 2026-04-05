@@ -39,11 +39,13 @@ public interface IntersectionNodeMetricsRepository
 			        i.start_osm_id as "startOsmId",
 			        i.end_osm_id as "endOsmId",
 			        i.number_of_rides as "numberOfRides",
-			        i.median_length as "medianLength",
-			        i.median_duration as "medianDuration",
-			        i.median_speed as "medianSpeed",
+			        i.avg_length as "avgLength",
+			        i.avg_duration as "avgDuration",
+			        i.avg_speed as "avgSpeed",
 			        i.max_waiting_time as "maxWaitingTime",
-			        i.median_waiting_time as "medianWaitingTime"
+			        i.avg_waiting as "avgWaitingTime",
+					i.stop_rate as "stopRate",
+					i.avg_waiting_when_stopped as "avgWaitingTimeWhenStopped"
 			    FROM intersection_node_metrics i, bounds
 			    WHERE i.number_of_rides >= :numberOfRides
 			    AND i.week_day = :weekDay
@@ -76,11 +78,13 @@ public interface IntersectionNodeMetricsRepository
 			        i.start_osm_id as "startOsmId",
 			        i.end_osm_id as "endOsmId",
 			        i.number_of_rides as "numberOfRides",
-			        i.median_length as "medianLength",
-			        i.median_duration as "medianDuration",
-			        i.median_speed as "medianSpeed",
+			        i.avg_length as "avgLength",
+			        i.avg_duration as "avgDuration",
+			        i.avg_speed as "avgSpeed",
 			        i.max_waiting_time as "maxWaitingTime",
-			        i.median_waiting_time as "medianWaitingTime"
+			        i.avg_waiting as "avgWaitingTime",
+					i.stop_rate as "stopRate",
+					i.avg_waiting_when_stopped as "avgWaitingTimeWhenStopped"
 			    FROM intersection_node_metrics i, bounds
 			    WHERE i.number_of_rides >= :numberOfRides
 			    AND i.week_day = :weekDay

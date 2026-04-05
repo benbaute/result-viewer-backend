@@ -40,11 +40,13 @@ public interface IntersectionEdgeMetricsRepository
 			        i.prev_osm_id as "prevOsmId",
 			        i.next_osm_id as "nextOsmId",
 			        i.number_of_rides as "numberOfRides",
-			        i.median_length as "medianLength",
-			        i.median_duration as "medianDuration",
-			        i.median_speed as "medianSpeed",
+			        i.avg_length as "avgLength",
+			        i.avg_duration as "avgDuration",
+			        i.avg_speed as "avgSpeed",
 			        i.max_waiting_time as "maxWaitingTime",
-			        i.median_waiting_time as "medianWaitingTime"
+			        i.avg_waiting as "avgWaitingTime",
+					i.stop_rate as "stopRate",
+					i.avg_waiting_when_stopped as "avgWaitingTimeWhenStopped"
 			    FROM intersection_edge_metrics i, bounds
 			    WHERE i.number_of_rides >= :numberOfRides
 			    AND i.week_day = :weekDay
@@ -78,11 +80,13 @@ public interface IntersectionEdgeMetricsRepository
 			        i.prev_osm_id as "prevOsmId",
 			        i.next_osm_id as "nextOsmId",
 			        i.number_of_rides as "numberOfRides",
-			        i.median_length as "medianLength",
-			        i.median_duration as "medianDuration",
-			        i.median_speed as "medianSpeed",
+			        i.avg_length as "avgLength",
+			        i.avg_duration as "avgDuration",
+			        i.avg_speed as "avgSpeed",
 			        i.max_waiting_time as "maxWaitingTime",
-			        i.median_waiting_time as "medianWaitingTime"
+			        i.avg_waiting as "avgWaitingTime",
+					i.stop_rate as "stopRate",
+					i.avg_waiting_when_stopped as "avgWaitingTimeWhenStopped"
 			    FROM intersection_edge_metrics i, bounds
 			    WHERE i.number_of_rides >= :numberOfRides
 			    AND i.week_day = :weekDay

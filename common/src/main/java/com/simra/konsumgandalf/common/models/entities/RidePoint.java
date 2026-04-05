@@ -29,6 +29,9 @@ public class RidePoint implements FeatureMappable {
 	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
+	@OneToOne(mappedBy = "ridePoint")
+	private MatchedPoint matchedPoint;
+
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 

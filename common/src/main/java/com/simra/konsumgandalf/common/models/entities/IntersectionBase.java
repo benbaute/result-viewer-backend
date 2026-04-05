@@ -25,6 +25,9 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
 	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
+	@Column(name = "ride_id", insertable = false, updatable = false)
+	private Long rideId;
+
 	@Column(columnDefinition = "geometry(LineString,4326)", nullable = false)
 	private LineString geom;
 
@@ -49,12 +52,12 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
 	@Column
 	private Double waitingTime; // s
 
-	@OneToOne
+	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "prev_intersection_id")
 	private IntersectionBase prevIntersection;
 
-	@OneToOne(mappedBy = "prevIntersection")
-	private IntersectionBase nextIntersection;
+	@Column(name = "prev_intersection_id", insertable = false, updatable = false)
+	private Long prevIntersectionId;
 
 	@Transient
 	private Integer indexInRide;
@@ -93,8 +96,7 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
 
 	public Map<String, Object> getBaseProperties() {
 		Map<String, Object> properties = super.getBaseProperties();
-		properties.put("nextIntersectionId", nextIntersection != null ? nextIntersection.getId() : null);
-		properties.put("prevIntersectionId", prevIntersection != null ? prevIntersection.getId() : null);
+		properties.put("prevIntersectionId", prevIntersectionId);
 		properties.put("id", id);
 		properties.put("startTime", startTime);
 		properties.put("endTime", endTime);
@@ -103,7 +105,7 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
 		properties.put("speed", speed);
 		properties.put("medianRideSpeed", medianSpeed);
 		properties.put("waitingTime", waitingTime);
-		properties.put("rideId", ride.getId());
+		properties.put("rideId", rideId);
 		return properties;
 	}
 

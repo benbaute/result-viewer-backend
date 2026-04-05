@@ -57,6 +57,7 @@ public class SchedulingService {
 		if (loadedRides > 0) {
 			safetyMetricsService.updateSafetyMetrics();
 			rideService.updateIntersectionMetrics();
+			this.exportJsons();
 		}
 	}
 
@@ -91,7 +92,6 @@ public class SchedulingService {
 		}
 
 		this.readNewRidesAndCalculateSafetyMetrics();
-		this.exportJsons();
 
 		_logger.info("SchedulingService finished initialization");
 		loggingAspect.printAllStopWatches();

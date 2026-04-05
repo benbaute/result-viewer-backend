@@ -76,9 +76,6 @@ public class RidePersistenceService {
 			IntersectionBase prev = prevIndexInRide.get(i) != null ? all.get(prevIndexInRide.get(i)) : null;
 
 			current.setPrevIntersection(prev);
-			if (prev != null) {
-				prev.setNextIntersection(current);
-			}
 		}
 
 		intersectionBaseRepository.flush();

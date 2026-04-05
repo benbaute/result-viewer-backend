@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 import org.locationtech.jts.geom.Point;
 
 import java.util.Date;
@@ -29,6 +30,9 @@ public class MatchedPoint implements FeatureMappable {
 	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
+	@Column(name = "ride_id", insertable = false, updatable = false)
+	private Long rideId;
+
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
@@ -36,12 +40,24 @@ public class MatchedPoint implements FeatureMappable {
 	@JoinColumn(name = "osm_id")
 	private PlanetOsmLine osmLine;
 
-	@OneToOne
+	@Column(name = "osm_id", insertable = false, updatable = false)
+	private Long osmLineId;
+
+	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "ride_point_id")
 	private RidePoint ridePoint;
 
-	@ManyToMany(mappedBy = "matchedPoints", fetch = FetchType.LAZY)
+	@Column(name = "ride_point_id", insertable = false, updatable = false)
+	private Long ridePointId;
+
+	@ManyToMany
+	@JoinTable(name = "intersection__matched_points", joinColumns = @JoinColumn(name = "matched_point_id"),
+			inverseJoinColumns = @JoinColumn(name = "intersection_id"))
 	private List<IntersectionBase> intersections;
+
+	@Formula("(SELECT CASE WHEN count(j.intersection_id) = 1 THEN min(j.intersection_id) ELSE null END "
+			+ "FROM intersection__matched_points j " + "WHERE j.matched_point_id = id)")
+	private Long singleIntersectionId;
 
 	private boolean inIntersection;
 
@@ -97,14 +113,12 @@ public class MatchedPoint implements FeatureMappable {
 	public Map<String, Object> getProperties() {
 		Map<String, Object> properties = new HashMap<>();
 		properties.put("id", id);
-		properties.put("ridePointId", ridePoint.getId());
-		if (intersections != null && intersections.size() == 1) {
-			properties.put("intersectionId", intersections.getFirst().getId());
-		}
-		properties.put("rideId", ride.getId());
+		properties.put("ridePointId", ridePointId);
+		properties.put("intersectionId", singleIntersectionId);
+		properties.put("rideId", rideId);
 		properties.put("timestamp", timestamp);
 		properties.put("accuracy", accuracy);
-		properties.put("osmId", osmLine != null ? osmLine.getId() : null);
+		properties.put("osmId", osmLineId);
 		properties.put("inIntersection", inIntersection);
 		properties.put("distanceFromTracePoint", distanceFromTracePoint);
 		properties.put("stops", stops);

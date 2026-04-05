@@ -2,6 +2,7 @@ package com.simra.konsumgandalf.rides.repositories;
 
 import com.simra.konsumgandalf.common.models.entities.RidePoint;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,5 +11,13 @@ import java.util.List;
 public interface RidePointRepository extends JpaRepository<RidePoint, Long> {
 
 	List<RidePoint> findByRideId(Long rideId);
+
+	@Query(value = """
+				SELECT r FROM RidePoint r
+			    JOIN r.matchedPoint m
+			    JOIN m.intersections i
+			    WHERE i.id = :intersectionBaseId
+			""")
+	List<RidePoint> findByIntersectionBaseId(Long intersectionBaseId);
 
 }
