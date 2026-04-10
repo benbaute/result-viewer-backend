@@ -2,7 +2,6 @@ package com.simra.konsumgandalf.rides.services;
 
 import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.models.entities.RideEntity;
-import com.simra.konsumgandalf.common.utils.services.FileReaderService;
 import com.simra.konsumgandalf.rides.repositories.RideEntityRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,12 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.Map;
 
 @Service
 public class RideEntityService {
@@ -41,38 +37,13 @@ public class RideEntityService {
 	public int loadAllPreviousRides() {
 		int counter = 0;
 
-		for (String path : getNewRidePaths()) {
+		for (String path : rideEntityProcessorService.getNewRidePaths(dataPath)) {
 			generateNewRideEntity(path);
 			_logger.info("[{}] Processed file: {}", ++counter, path);
 		}
 
 		_logger.info("Loaded {} new rides", counter);
 		return counter;
-	}
-
-	private List<String> getNewRidePaths() {
-		try (Stream<Path> allPathsStream = Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)) {
-
-			List<String> allPaths = allPathsStream.filter(Files::isRegularFile)
-				.filter(FileReaderService::isEntityFile)
-				.map(Path::toString)
-				.toList();
-
-			int batchSize = 10000;
-			List<String> newRidePaths = new ArrayList<>();
-
-			for (int i = 0; i < allPaths.size(); i += batchSize) {
-				List<String> batch = allPaths.subList(i, Math.min(i + batchSize, allPaths.size()));
-				Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(batch));
-				newRidePaths.addAll(batch.stream().filter(path -> !existingPaths.contains(path)).toList());
-			}
-
-			return newRidePaths;
-		}
-		catch (Exception e) {
-			_logger.error("Error reading files from path: {}", dataPath, e);
-			return Collections.emptyList();
-		}
 	}
 
 	/**
@@ -86,13 +57,13 @@ public class RideEntityService {
 			rideEntityProcessorService.linkToPlanetOsmLine(rideEntity);
 			rideProcessorService.processRideEntity(rideEntity);
 
-			rideEntityRepository.save(rideEntity);
+			rideEntityProcessorService.saveRideEntity(rideEntity);
 		}
 		catch (Exception e) {
 			_logger.error("Error processing file: {}", path, e);
 
 			// Create empty rideEntity, to avoid this file in later runs
-			rideEntityRepository.save(new RideEntity(path));
+			rideEntityProcessorService.saveRideEntity(new RideEntity(path));
 		}
 	}
 

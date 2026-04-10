@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.rides.services;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.entities.*;
 import com.simra.konsumgandalf.rides.repositories.IntersectionBaseRepository;
@@ -37,16 +38,19 @@ public class RidePersistenceService {
 	RidePersistenceService() {
 	}
 
+	@LogExecutionTimeSubTask
 	@Transactional
 	public void saveRide(Ride ride) {
 		rideRepository.save(ride);
 	}
 
+	@LogExecutionTimeSubTask
 	@Transactional
 	public void saveMatchedPoints(List<MatchedPoint> matchedPoints) {
 		matchedPointRepository.saveAll(matchedPoints);
 	}
 
+	@LogExecutionTimeSubTask
 	@Transactional
 	protected void saveIntersectionsLists(List<IntersectionNode> intersectionNodeList,
 			List<IntersectionEdge> intersectionEdgeList) {
@@ -81,6 +85,7 @@ public class RidePersistenceService {
 		intersectionBaseRepository.flush();
 	}
 
+	@LogExecutionTimeSubTask
 	@Transactional
 	public void saveRidePointsAndSetRideIds(Ride ride) {
 		List<RidePoint> ridePointList = new ArrayList<>();

@@ -1,5 +1,6 @@
 package com.simra.konsumgandalf.rides.repositories;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.entities.IntersectionRegionMetrics;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -15,6 +16,7 @@ import java.util.List;
 public interface IntersectionRegionMetricsRepository
 		extends JpaRepository<IntersectionRegionMetrics, Long>, JpaSpecificationExecutor<IntersectionRegionMetrics> {
 
+	@LogExecutionTimeSubTask
 	@Modifying
 	@Transactional
 	@Query(value = """

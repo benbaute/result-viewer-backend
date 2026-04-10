@@ -19,23 +19,19 @@ import com.simra.konsumgandalf.valhalla.services.ValhallaTraceAttributesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.FileVisitOption;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.simra.konsumgandalf.common.constants.AppDates.*;
 
 @Service
 public class RideEntityProcessorService {
-
-	@Autowired
-	@Lazy // Crucial! Prevents "Circular Dependency" errors
-	private RideEntityProcessorService self;
-
-	private static Path dataPath;
 
 	private static final ObjectMapper _objectMapper = new ObjectMapper();
 
@@ -57,15 +53,43 @@ public class RideEntityProcessorService {
 	private FileReaderService fileReaderService;
 
 	@Autowired
-	private RideProcessorService rideProcessorService;
-
-	@Autowired
 	private GeoService geoService;
 
 	static final double MIN_DISTANCE_METERS = 3.0;
 	static final double MAX_SPEED_METERS_PER_SECOND = 30.0; // Above 100 km/h for a bike
 
 	RideEntityProcessorService() {
+	}
+
+	@LogExecutionTimeSubTask
+	public void saveRideEntity(RideEntity rideEntity) {
+		rideEntityRepository.save(rideEntity);
+	}
+
+	@LogExecutionTimeSubTask
+	public List<String> getNewRidePaths(Path dataPath) {
+		try (Stream<Path> allPathsStream = Files.walk(dataPath, 8, FileVisitOption.FOLLOW_LINKS)) {
+
+			List<String> allPaths = allPathsStream.filter(Files::isRegularFile)
+				.filter(FileReaderService::isEntityFile)
+				.map(Path::toString)
+				.toList();
+
+			int batchSize = 10000;
+			List<String> newRidePaths = new ArrayList<>();
+
+			for (int i = 0; i < allPaths.size(); i += batchSize) {
+				List<String> batch = allPaths.subList(i, Math.min(i + batchSize, allPaths.size()));
+				Set<String> existingPaths = new HashSet<>(rideEntityRepository.findExistingPaths(batch));
+				newRidePaths.addAll(batch.stream().filter(path -> !existingPaths.contains(path)).toList());
+			}
+
+			return newRidePaths;
+		}
+		catch (Exception e) {
+			_logger.error("Error reading files from path: {}", dataPath, e);
+			return Collections.emptyList();
+		}
 	}
 
 	/**
