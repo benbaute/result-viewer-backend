@@ -480,6 +480,7 @@ SELECT
     agg.avg_speed,
     agg.avg_duration,
     agg.avg_waiting,
+    agg.sum_waiting_time,
     agg.max_waiting_time,
     agg.stop_rate,
     agg.avg_waiting_when_stopped
@@ -499,6 +500,7 @@ FROM (
              AVG(speed) AS avg_speed,
              AVG(duration) AS avg_duration,
              AVG(waiting_time) AS avg_waiting,
+             SUM(waiting_time) AS sum_waiting_time,
              MAX(waiting_time) AS max_waiting_time,
 
              100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS stop_rate,
@@ -567,6 +569,7 @@ SELECT
     agg.avg_speed,
     agg.avg_duration,
     agg.avg_waiting,
+    agg.sum_waiting_time,
     agg.max_waiting_time,
     agg.stop_rate,
     agg.avg_waiting_when_stopped
@@ -586,6 +589,7 @@ FROM (
              AVG(speed) AS avg_speed,
              AVG(duration) AS avg_duration,
              AVG(waiting_time) AS avg_waiting,
+             SUM(waiting_time) AS sum_waiting_time,
              MAX(waiting_time) AS max_waiting_time,
 
              100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS stop_rate,

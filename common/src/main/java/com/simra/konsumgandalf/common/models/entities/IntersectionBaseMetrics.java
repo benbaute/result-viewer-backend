@@ -36,6 +36,9 @@ public abstract class IntersectionBaseMetrics extends TimeBaseClass {
 	@Column(name = "max_waiting_time")
 	private double maxWaitingTime;
 
+	@Column(name = "sum_waiting_time")
+	private double sumWaitingTime;
+
 	@Column(name = "avg_waiting")
 	private double avgWaitingTime;
 
@@ -53,6 +56,7 @@ public abstract class IntersectionBaseMetrics extends TimeBaseClass {
 		properties.put("avgDuration", avgDuration);
 		properties.put("avgSpeed", avgSpeed);
 		properties.put("maxWaitingTime", maxWaitingTime);
+		properties.put("sumWaitingTime", sumWaitingTime);
 		properties.put("avgWaitingTime", avgWaitingTime);
 		properties.put("stopRate", stopRate);
 		properties.put("avgWaitingTimeWhenStopped", avgWaitingTimeWhenStopped);

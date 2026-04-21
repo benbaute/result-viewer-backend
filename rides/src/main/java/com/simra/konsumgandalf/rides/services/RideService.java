@@ -9,7 +9,9 @@ import com.simra.konsumgandalf.rides.classes.specifications.*;
 import com.simra.konsumgandalf.rides.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -82,7 +84,11 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeBase(trafficTime))
 			.and(TimeSpecifications.hasYearBase(year))
 			.and(TimeSpecifications.inDateRange(startDate, endDate));
-		return intersectionNodeRepository.findAll(spec, pageable);
+
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionNodeRepository.findAll(spec, stablePageable);
 	}
 
 	public Page<IntersectionEdge> getIntersectionEdgesPageable(Long osmId, Long valhallaEdgeId, Long prevValhallaEdgeId,
@@ -95,7 +101,11 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeBase(trafficTime))
 			.and(TimeSpecifications.hasYearBase(year))
 			.and(TimeSpecifications.inDateRange(startDate, endDate));
-		return intersectionEdgeRepository.findAll(spec, pageable);
+
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionEdgeRepository.findAll(spec, stablePageable);
 	}
 
 	public Page<IntersectionNodeMetrics> getIntersectionNodeMetricsPageable(Long trafficSignalClusterId,
@@ -113,7 +123,10 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return intersectionNodeMetricsRepository.findAll(spec, pageable);
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionNodeMetricsRepository.findAll(spec, stablePageable);
 	}
 
 	public List<String> findAllStreetNamesIncludingStringIntersectionNode(Long trafficSignalClusterId, Long count,
@@ -137,7 +150,10 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return intersectionEdgeMetricsRepository.findAll(spec, pageable);
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionEdgeMetricsRepository.findAll(spec, stablePageable);
 	}
 
 	public List<String> findAllStreetNamesIntersectionEdge(Long count, String region, String name) {
@@ -146,7 +162,11 @@ public class RideService {
 
 	public Map<String, Object> getRideIdsPageable(Long id, Pageable pageable) {
 		Specification<Ride> spec = Specification.where(RideSpecifications.hasIdLike(id));
-		Page<Ride> pages = rideRepository.findAll(spec, pageable);
+
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		Page<Ride> pages = rideRepository.findAll(spec, stablePageable);
 		return GeoService.getPageableMap(pages, "ids", pages.getContent().stream().map(Ride::getId).toList());
 	}
 
@@ -167,7 +187,10 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
 			.and(TimeSpecifications.hasYearMetrics(year));
 
-		return intersectionRegionMetricsRepository.findAll(spec, pageable);
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionRegionMetricsRepository.findAll(spec, stablePageable);
 	}
 
 	public Page<IntersectionRideRegionMetrics> getIntersectionRideRegionMetricsPageable(Long regionId, WeekDays weekDay,
@@ -179,7 +202,10 @@ public class RideService {
 			.and(TimeSpecifications.hasTrafficTimeBase(trafficTime))
 			.and(TimeSpecifications.hasYearBase(year));
 
-		return intersectionRideRegionMetricsRepository.findAll(spec, pageable);
+		Sort stableSort = pageable.getSort().and(Sort.by("id").ascending());
+		Pageable stablePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), stableSort);
+
+		return intersectionRideRegionMetricsRepository.findAll(spec, stablePageable);
 	}
 
 	public Optional<IntersectionBase> getIntersectionBase(Long intersectionBaseId) {
