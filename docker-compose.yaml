@@ -74,21 +74,19 @@ services:
 
     init-postgis:
         container_name: init-postgis
-        image: codinggandalf/postgis:arm64-init-postgis
-        # platform: linux/arm64
+        image: ubuntu:24.04
         restart: "no"
-        extra_hosts:
-            - "host.docker.internal:host-gateway"
+        depends_on:
+            postgis:
+                condition: service_healthy
         command:
           [
               "sh",
               "-c",
-              "export PGPASSWORD=${POSTGRES_PASSWORD} &&
-         osm2pgsql -d ${POSTGRES_DB} -U ${POSTGRES_USER} -H ${POSTGRES_HOST} -C 4096 --number-processes=4 --slim --hstore /tmp/${OSM_MAP_SOURCE}"
+              "apt-get update && apt-get install -y osm2pgsql postgresql-client && 
+               export PGPASSWORD=${POSTGRES_PASSWORD} && 
+               osm2pgsql -d ${POSTGRES_DB} -U ${POSTGRES_USER} -H postgis -C 4096 --number-processes=4 --slim --hstore /tmp/${OSM_MAP_SOURCE}"
           ]
-        #depends_on:
-        #    postgis:
-        #        condition: service_healthy
         volumes:
             - ./postgis/data/${OSM_MAP_SOURCE}:/tmp/${OSM_MAP_SOURCE}
         env_file:
