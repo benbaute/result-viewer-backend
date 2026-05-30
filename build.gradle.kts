@@ -91,3 +91,10 @@ repositories {
 tasks.getByName<Jar>("jar") {
     enabled = false
 }
+subprojects {
+    if (name in listOf("common", "osmPlanet", "rides", "valhalla")) {
+        tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+            enabled = false
+        }
+    }
+}

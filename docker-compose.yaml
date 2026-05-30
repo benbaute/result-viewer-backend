@@ -20,7 +20,7 @@ services:
             redis:
                 condition: service_healthy
         volumes:
-            # - /home/test/Documents/simra/dataset/RidesLinks:/rides # would copy data from harddrive to docker
+            - /home/test/Documents/simra/dataset/RidesLinks:/rides # would copy data from harddrive to docker
             - /home/test/Documents/simra/result-viewer-frontend/src/assets/maplibre:/maplibre-output
         healthcheck:
             test: ["CMD-SHELL", "curl -f http://localhost:8080/api/actuator/health || true"]
