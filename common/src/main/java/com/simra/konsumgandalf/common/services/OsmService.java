@@ -13,10 +13,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.util.*;
 
 @Service
@@ -79,9 +77,7 @@ public class OsmService {
 	@Modifying
 	@Transactional
 	public void mergeClusters() throws IOException {
-		Path baseDir = Paths.get("").toAbsolutePath();
-		Path configFile = baseDir.resolve("common/src/main/resources/trafficSignal.config");
-		FileInputStream input = new FileInputStream(configFile.toFile());
+        InputStream input = getClass().getClassLoader().getResourceAsStream("trafficSignal.config");
 		Properties properties = new Properties();
 		properties.load(input);
 		String clustersString = properties.getProperty("forced_clusters");
