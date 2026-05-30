@@ -13,15 +13,15 @@ services:
         ports:
             - 8080:8080
         depends_on:
-        #    postgis:
-        #        condition: service_healthy
+            postgis:
+                condition: service_healthy
             valhalla:
                 condition: service_healthy
             redis:
                 condition: service_healthy
         volumes:
-            - /home/test/Documents/simra/dataset/RidesLinks:/rides # would copy data from harddrive to docker
-            - /home/test/Documents/simra/result-viewer-frontend/src/assets/maplibre:/maplibre-output
+            - /home/ben/Documents/simra/dataset/simra-test/Rides:/rides
+            - /home/ben/Documents/simra/result-viewer-frontend/src/assets/maplibre:/maplibre-output
         healthcheck:
             test: ["CMD-SHELL", "curl -f http://localhost:8080/api/actuator/health || true"]
             interval: 10s
@@ -29,16 +29,14 @@ services:
             retries: 3
             start_period: 10s
         networks:
-            - postgis-service
-            - valhalla-service
-            - redis-service
+            - simra-network
 
     valhalla:
         image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
         ports:
             - 25001:8002
         networks:
-            - valhalla-service
+            - simra-network
         volumes:
             - ./valhalla/custom_files/:/custom_files
             - ./valhalla/gtfs_feeds:/gtfs_feeds
@@ -66,7 +64,7 @@ services:
         env_file:
             - .env
         networks:
-            - redis-service
+            - simra-network
         healthcheck:
             test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
             interval: 10s
@@ -96,36 +94,30 @@ services:
         env_file:
             - .env
         networks:
-            - postgis-service
+            - simra-network
 
-    #postgis:
-    #    container_name: postgis
-    #    image: codinggandalf/postgis:arm64 # oficial or shelll script, datenbank muss osm postgis initialisieren
-        # platform: linux/arm64
-    #    shm_size: 4gb
-    #    env_file:
-    #        - .env
-    #    ports:
-    #        - 25432:5432
-    #    volumes:
-    #        - postgis-data:/var/lib/postgresql/data
-    #       - ./postgis/10_enable_postgis.sql:/docker-entrypoint-initdb.d/10_enable_postgis.sql
-            # If you want to run initialization scripts, uncomment the following line and add your scripts to the postgis folder
-            # - ./postgis/10_postgis.sh:/docker-entrypoint-initdb.d/10_postgis.sh
-    #    healthcheck:
-    #        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "localhost"]
-    #        interval: 10s
-    #        retries: 5
-    #        start_period: 10s
-    #        timeout: 5s
-    #    networks:
-    #        - postgis-service
+    postgis:
+        container_name: postgis
+        image: postgis/postgis:16-3.4 # codinggandalf/postgis:arm64 # official or shell script, database has to initialize osm postgis
+        shm_size: 4gb
+        env_file:
+            - .env
+        ports:
+            - 25432:5432
+        volumes:
+            - postgis-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "localhost"]
+            interval: 10s
+            retries: 5
+            start_period: 10s
+            timeout: 5s
+        networks:
+            - simra-network
 
 volumes:
     postgis-data:
     redis-data:
 
 networks:
-    postgis-service:
-    valhalla-service:
-    redis-service:
+    simra-network:
