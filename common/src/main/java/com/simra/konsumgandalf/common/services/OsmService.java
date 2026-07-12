@@ -77,7 +77,7 @@ public class OsmService {
 	@Modifying
 	@Transactional
 	public void mergeClusters() throws IOException {
-        InputStream input = getClass().getClassLoader().getResourceAsStream("trafficSignal.config");
+		InputStream input = getClass().getClassLoader().getResourceAsStream("trafficSignal.config");
 		Properties properties = new Properties();
 		properties.load(input);
 		String clustersString = properties.getProperty("forced_clusters");

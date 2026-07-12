@@ -2,6 +2,7 @@ package com.simra.konsumgandalf.common.models.entities;
 
 import com.simra.konsumgandalf.common.models.enums.WeekDays;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
+import com.simra.konsumgandalf.common.models.interfaces.Identifiable;
 import com.simra.konsumgandalf.common.models.maps.TrafficTimesMapper;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,7 +16,7 @@ import java.util.*;
 @Setter
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class IntersectionBase extends TimeBaseClass implements FeatureMappable {
+public abstract class IntersectionBase extends TimeBaseClass implements FeatureMappable, Identifiable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,10 +68,9 @@ public abstract class IntersectionBase extends TimeBaseClass implements FeatureM
 			inverseJoinColumns = @JoinColumn(name = "matched_point_id"))
 	private List<MatchedPoint> matchedPoints = new ArrayList<>();
 
-	@ManyToMany
-	@JoinTable(name = "intersection__region", joinColumns = @JoinColumn(name = "intersection_id"),
-			inverseJoinColumns = @JoinColumn(name = "region_id"))
-	private Set<Region> regions = new HashSet<>();
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "smallest_region")
+	private Region smallestRegion;
 
 	// For calculating region
 	@Transient

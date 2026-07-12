@@ -24,10 +24,10 @@ services:
             - /home/ben/Documents/simra/result-viewer-frontend/src/assets/maplibre:/maplibre-output
         healthcheck:
             test: ["CMD-SHELL", "curl -f http://localhost:8080/api/actuator/health || true"]
-            interval: 10s
-            timeout: 5s
+            interval: 30s
             retries: 3
-            start_period: 10s
+            start_period: 30s
+            timeout: 10s
         networks:
             - simra-network
 
@@ -41,8 +41,7 @@ services:
             - ./valhalla/custom_files/:/custom_files
             - ./valhalla/gtfs_feeds:/gtfs_feeds
         environment:
-            - tile_urls=https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf 
-               
+            - tile_urls=https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
             - server_threads=8
             - use_tiles_ignore_pbf=False
             - tileset_name=valhalla_tiles
@@ -50,9 +49,9 @@ services:
             - update_existing_config=True
         healthcheck:
             test: curl --fail -s http://localhost:8002/status || exit 1
-            interval: 20s
-            retries: 10
-            start_period: 5s
+            interval: 30s
+            retries: 3
+            start_period: 30s
             timeout: 10s
 
     redis:
@@ -67,10 +66,10 @@ services:
             - simra-network
         healthcheck:
             test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-            start_period: 5s
+            interval: 30s
+            retries: 3
+            start_period: 30s
+            timeout: 10s
 
     init-postgis:
         container_name: init-postgis
@@ -97,6 +96,7 @@ services:
     postgis:
         container_name: postgis
         image: postgis/postgis:16-3.4 # codinggandalf/postgis:arm64 # official or shell script, database has to initialize osm postgis
+        init: true
         shm_size: 4gb
         env_file:
             - .env
@@ -106,10 +106,10 @@ services:
             - postgis-data:/var/lib/postgresql/data
         healthcheck:
             test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "localhost"]
-            interval: 10s
-            retries: 5
-            start_period: 10s
-            timeout: 5s
+            interval: 30s
+            retries: 3
+            start_period: 30s
+            timeout: 10s
         networks:
             - simra-network
 

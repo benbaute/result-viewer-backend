@@ -1,7 +1,7 @@
 package com.simra.konsumgandalf.common.controller;
 
+import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import com.simra.konsumgandalf.common.services.OsmService;
-import com.simra.konsumgandalf.common.utils.services.GeoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,15 +21,15 @@ public class OsmController {
 	@GetMapping("/traffic-signals/cluster/{trafficSignalClusterId}")
 	public ResponseEntity<Map<String, Object>> findTrafficSignalsByTrafficSignalClusterId(
 			@PathVariable Long trafficSignalClusterId) {
-		return ResponseEntity.ok(GeoService
-			.getFeatureCollection(osmService.findTrafficSignalsByTrafficSignalClusterId(trafficSignalClusterId)));
+		return ResponseEntity.ok(FeatureMappable
+			.toFeatureCollection(osmService.findTrafficSignalsByTrafficSignalClusterId(trafficSignalClusterId)));
 	}
 
 	@GetMapping("/cluster-polygons/{trafficSignalClusterId}")
 	public ResponseEntity<Map<String, Object>> getTrafficSignalClusterPolygon(
 			@PathVariable Long trafficSignalClusterId) {
-		return ResponseEntity.ok(GeoService.getFeatureCollection(
-				osmService.findTrafficSignalClustersByTrafficSignalClusterId(trafficSignalClusterId)));
+		return ResponseEntity.ok(FeatureMappable
+			.toFeatureCollection(osmService.findTrafficSignalClustersByTrafficSignalClusterId(trafficSignalClusterId)));
 	}
 
 	@GetMapping(value = "/cluster/tiles/{z}/{x}/{y}.pbf", produces = "application/x-protobuf")

@@ -2,8 +2,12 @@ package com.simra.konsumgandalf.rides.repositories;
 
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.entities.IntersectionEdgeMetrics;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import com.simra.konsumgandalf.common.models.enums.TrafficTimes;
+import com.simra.konsumgandalf.common.models.enums.WeekDays;
+import com.simra.konsumgandalf.rides.classes.specifications.IntersectionBaseMetricsSpecifications;
+import com.simra.konsumgandalf.rides.classes.specifications.IntersectionEdgeMetricsSpecifications;
+import com.simra.konsumgandalf.rides.classes.specifications.TimeSpecifications;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,8 +15,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public interface IntersectionEdgeMetricsRepository
-		extends JpaRepository<IntersectionEdgeMetrics, Long>, JpaSpecificationExecutor<IntersectionEdgeMetrics> {
+public interface IntersectionEdgeMetricsRepository extends RepositoryFeatureMappable<IntersectionEdgeMetrics, Long> {
 
 	@LogExecutionTimeSubTask
 	@Modifying
@@ -101,5 +104,19 @@ public interface IntersectionEdgeMetricsRepository
 	byte[] getEdgeMetricsStartTile(@Param("z") int z, @Param("x") int x, @Param("y") int y,
 			@Param("numberOfRides") Long numberOfRides, @Param("weekDay") String weekDay,
 			@Param("trafficTime") String trafficTime, @Param("year") int year);
+
+	default Specification<IntersectionEdgeMetrics> createSpecification(Long osmId, Long valhallaEdgeId,
+			Long prevValhallaEdgeId, Long nextValhallaEdgeId, Long count, String regionLTreePath, String name,
+			WeekDays weekDay, TrafficTimes trafficTime, Integer year) {
+		return Specification.where(IntersectionEdgeMetricsSpecifications.hasOsmId(osmId))
+			.and(IntersectionEdgeMetricsSpecifications.isSegment(valhallaEdgeId, prevValhallaEdgeId,
+					nextValhallaEdgeId))
+			.and(IntersectionEdgeMetricsSpecifications.hasName(name))
+			.and(IntersectionBaseMetricsSpecifications.hasMinCount(count))
+			.and(IntersectionBaseMetricsSpecifications.isInsideRegionPath(regionLTreePath))
+			.and(TimeSpecifications.hasWeekDayMetrics(weekDay))
+			.and(TimeSpecifications.hasTrafficTimeMetrics(trafficTime))
+			.and(TimeSpecifications.hasYearMetrics(year));
+	}
 
 }

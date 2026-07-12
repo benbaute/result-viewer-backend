@@ -3,6 +3,7 @@ package com.simra.konsumgandalf.common.models.entities;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 
 import java.util.Map;
@@ -10,7 +11,7 @@ import java.util.Map;
 @Getter
 @Entity
 @org.hibernate.annotations.Immutable
-@org.hibernate.annotations.Subselect("select * from intersection_node_metrics")
+@Table(name = "intersection_node_metrics")
 public class IntersectionNodeMetrics extends IntersectionBaseMetrics implements FeatureMappable {
 
 	@Column(name = "global_example_id")

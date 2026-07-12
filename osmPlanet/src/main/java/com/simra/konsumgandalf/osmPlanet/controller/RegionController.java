@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -27,6 +28,11 @@ public class RegionController {
 	@GetMapping("name")
 	public List<String> getAllRegions() {
 		return regionService.getAllRegions("");
+	}
+
+	@GetMapping("regionTree")
+	public List<Map<String, Object>> getRegionTree() {
+		return regionService.getRegionTree();
 	}
 
 	@GetMapping("name/{prefix}")

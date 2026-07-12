@@ -36,8 +36,11 @@ spring:
     defer-datasource-initialization: true
     hibernate:
       ddl-auto: update # not delete existing columns which is important for the osm tables
+    # show-sql: true # Uncomment to debug SQL queries
     properties:
       hibernate:
+        format_sql: true
+        highlight_sql: true
         jdbc:
           lob:
             non_contextual_creation: true
@@ -45,6 +48,9 @@ spring:
           batch_versioned_data: true
         order_updates: true
         order_inserts: true
+
+        hbm2ddl:
+          schema_filter_provider: com.simra.konsumgandalf.backend.config.ViewExclusionSchemaFilterProvider
   sql:
     init:
       mode: always
@@ -59,3 +65,5 @@ management:
     web:
       exposure:
         include: "*"
+
+

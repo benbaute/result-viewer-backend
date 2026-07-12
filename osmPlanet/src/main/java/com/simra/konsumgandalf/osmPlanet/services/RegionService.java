@@ -10,9 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class RegionService {
@@ -42,8 +40,39 @@ public class RegionService {
 		mapper.writeValue(target, json);
 	}
 
+	public List<Map<String, Object>> getRegionTree() {
+		List<Region> allRegions = regionRepository.findAllWithRidesOrderByAdminLevel();
+		Map<Long, Map<String, Object>> nodeMap = new HashMap<>();
+		List<Map<String, Object>> rootNodes = new ArrayList<>();
+
+		for (Region region : allRegions) {
+			Map<String, Object> node = region.getProperties();
+			nodeMap.put(region.getId(), node);
+
+			if (region.getParent() == null) {
+				rootNodes.add(node);
+			}
+			else {
+				Map<String, Object> parentNode = nodeMap.get(region.getParent().getId());
+				if (parentNode != null) {
+					if (parentNode.containsKey("children")) {
+						((List<Map<String, Object>>) parentNode.get("children")).add(node);
+					}
+					else {
+						List<Map<String, Object>> children = new ArrayList<>();
+						children.add(node);
+						parentNode.put("children", children);
+					}
+				}
+			}
+		}
+		return rootNodes;
+	}
+
 	public void saveRegions() {
 		regionRepository.saveRegions();
+		regionRepository.updateRegionHierarchy();
+		regionRepository.updateLtreePaths();
 	}
 
 	public boolean emptyRegions() {

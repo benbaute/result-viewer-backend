@@ -29,9 +29,6 @@ public class RidePoint implements FeatureMappable {
 	@JoinColumn(name = "ride_id", nullable = false)
 	private Ride ride;
 
-	@OneToOne(mappedBy = "ridePoint")
-	private MatchedPoint matchedPoint;
-
 	@Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point geom;
 
@@ -47,7 +44,7 @@ public class RidePoint implements FeatureMappable {
 		Map<String, Object> properties = new HashMap<>();
 		properties.put("id", id);
 		properties.put("timestamp", this.getTimestamp());
-		properties.put("path", this.getRide().getPath());
+		properties.put("path", this.ride.getPath());
 		properties.put("rideId", this.ride.getId());
 		return properties;
 	}

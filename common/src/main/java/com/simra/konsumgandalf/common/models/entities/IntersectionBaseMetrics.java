@@ -1,8 +1,7 @@
 package com.simra.konsumgandalf.common.models.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
+import com.simra.konsumgandalf.common.models.interfaces.Identifiable;
+import jakarta.persistence.*;
 import lombok.Getter;
 import org.locationtech.jts.geom.LineString;
 
@@ -10,7 +9,7 @@ import java.util.Map;
 
 @Getter
 @MappedSuperclass
-public abstract class IntersectionBaseMetrics extends TimeBaseClass {
+public abstract class IntersectionBaseMetrics extends TimeBaseClass implements Identifiable {
 
 	@Id
 	private Long id;
@@ -20,6 +19,10 @@ public abstract class IntersectionBaseMetrics extends TimeBaseClass {
 
 	// @Column(name = "example_id")
 	// private int exampleId; // TODO: add back if mqt fixed
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "smallest_region")
+	private Region smallestRegion;
 
 	@Column(name = "number_of_rides")
 	private int numberOfRides;

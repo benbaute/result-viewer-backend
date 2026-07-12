@@ -10,14 +10,8 @@ import java.util.Map;
 @Getter
 @Entity
 @org.hibernate.annotations.Immutable
-@org.hibernate.annotations.Subselect("select * from intersection_ride_region_metrics")
-public class IntersectionRideRegionMetrics extends TimeBaseClass implements PropertiesMappable {
-
-	@Id
-	private Long id;
-
-	@Column(name = "region_id")
-	private Long regionId;
+@Table(name = "intersection_ride_region_metrics")
+public class IntersectionRideRegionMetrics extends IntersectionRegionBaseMetrics implements PropertiesMappable {
 
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date startTime;
@@ -25,108 +19,16 @@ public class IntersectionRideRegionMetrics extends TimeBaseClass implements Prop
 	@Column(name = "ride_id")
 	private Long rideId;
 
-	@Column(name = "name")
-	private String name;
-
-	@Column(name = "admin_level")
-	private int adminLevel;
-
-	@Column(name = "median_ride_speed")
+	@Column(name = "median_speed")
 	private double medianRideSpeed;
-
-	@Column(name = "length_km")
-	private double length;
-
-	@Column(name = "duration")
-	private double duration;
-
-	@Column(name = "number_of_edges")
-	private int numberOfEdges;
-
-	@Column(name = "edge_length_km")
-	private double edgeLength;
-
-	@Column(name = "edge_duration")
-	private double edgeDuration;
-
-	@Column(name = "edge_waiting_time")
-	private double edgeWaitingTime;
-
-	@Column(name = "edge_avg_waiting_time")
-	private double edgeAvgWaitingTime;
-
-	@Column(name = "edge_avg_waiting_when_stopped")
-	private double edgeAvgWaitingTimeWhenStopped;
-
-	@Column(name = "edge_stop_rate")
-	private double edgeStopRate;
-
-	@Column(name = "edge_waiting_s_per_km")
-	private double edgeWaitingSPerKm;
-
-	@Column(name = "edge_waiting_rate")
-	private double edgeWaitingRate;
-
-	@Column(name = "number_of_nodes")
-	private int numberOfNodes;
-
-	@Column(name = "node_length_km")
-	private double nodeLength;
-
-	@Column(name = "node_duration")
-	private double nodeDuration;
-
-	@Column(name = "node_waiting_time")
-	private double nodeWaitingTime;
-
-	@Column(name = "node_avg_waiting_time")
-	private double nodeAvgWaitingTime;
-
-	@Column(name = "node_avg_waiting_when_stopped")
-	private double nodeAvgWaitingTimeWhenStopped;
-
-	@Column(name = "node_stop_rate")
-	private double nodeStopRate;
-
-	@Column(name = "node_waiting_s_per_km")
-	private double nodeWaitingSPerKm;
-
-	@Column(name = "node_waiting_rate")
-	private double nodeWaitingRate;
 
 	@Override
 	public Map<String, Object> getProperties() {
-		Map<String, Object> properties = this.getBaseProperties();
+		Map<String, Object> properties = this.getRegionBaseProperties();
 		properties.put("rideId", rideId);
-		properties.put("regionId", regionId);
+		properties.put("regionId", this.getRegion().getId());
 		properties.put("startTime", startTime);
-		properties.put("name", name);
-		properties.put("adminLevel", adminLevel);
 		properties.put("medianRideSpeed", medianRideSpeed);
-		properties.put("length", length);
-		properties.put("duration", duration);
-
-		properties.put("numberOfEdges", numberOfEdges);
-		properties.put("edgeLength", edgeLength);
-		properties.put("edgeDuration", edgeDuration);
-		properties.put("edgeWaitingTime", edgeWaitingTime);
-		properties.put("edgeAvgWaitingTime", edgeAvgWaitingTime);
-		properties.put("edgeAvgWaitingTimeWhenStopped", edgeAvgWaitingTimeWhenStopped);
-		properties.put("edgeStopRate", edgeStopRate);
-		properties.put("edgeWaitingSPerKm", edgeWaitingSPerKm);
-		properties.put("edgeWaitingRate", edgeWaitingRate);
-
-		properties.put("numberOfNodes", numberOfNodes);
-		properties.put("nodeLength", nodeLength);
-		properties.put("nodeDuration", nodeDuration);
-		properties.put("nodeWaitingTime", nodeWaitingTime);
-		properties.put("nodeAvgWaitingTime", nodeAvgWaitingTime);
-		properties.put("nodeAvgWaitingTimeWhenStopped", nodeAvgWaitingTimeWhenStopped);
-		properties.put("nodeStopRate", nodeStopRate);
-		properties.put("nodeWaitingSPerKm", nodeWaitingSPerKm);
-		properties.put("nodeWaitingRate", nodeWaitingRate);
-
-		properties.put("nodesPerKm", numberOfNodes / length);
 
 		return properties;
 	}

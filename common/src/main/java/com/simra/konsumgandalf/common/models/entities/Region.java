@@ -2,12 +2,9 @@ package com.simra.konsumgandalf.common.models.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
 
 import java.util.HashMap;
@@ -38,11 +35,19 @@ public class Region implements FeatureMappable {
 	@Column(columnDefinition = "geometry(Polygon,3857)")
 	private Polygon geom3857;
 
+	// Self referencing column, with parent region of lower admin level
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "parent_id")
+	private Region parent;
+
+	@Column(name = "ltree_path", columnDefinition = "ltree")
+	private String ltreePath;
+
 	public Region() {
 	}
 
 	@Override
-	public Geometry getGeom() {
+	public Polygon getGeom() {
 		return way;
 	}
 
@@ -52,6 +57,7 @@ public class Region implements FeatureMappable {
 		properties.put("id", id);
 		properties.put("name", name);
 		properties.put("adminLevel", adminLevel);
+		properties.put("ltreePath", ltreePath);
 		return properties;
 	}
 

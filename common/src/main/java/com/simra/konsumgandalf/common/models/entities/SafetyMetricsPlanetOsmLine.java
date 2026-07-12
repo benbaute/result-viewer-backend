@@ -11,7 +11,7 @@ import lombok.Getter;
 @Entity
 @IdClass(SafetyMetricsIDKey.class)
 @org.hibernate.annotations.Immutable
-@org.hibernate.annotations.Subselect("select * from safety_metrics__planet_osm_line")
+@Table(name = "safety_metrics__planet_osm_line")
 public class SafetyMetricsPlanetOsmLine extends SafetyMetrics<SafetyMetricsPlanetOsmLine> {
 
 	@Id

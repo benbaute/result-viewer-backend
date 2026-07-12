@@ -82,10 +82,16 @@ public class RideProcessorService {
 		}
 		setWaitingTimesAndMedianSpeed(intersectionNodeList, intersectionEdgeList);
 
-		setContainingRegions(intersectionEdgeList);
-		setContainingRegions(intersectionNodeList);
-
+		Set<Long> rideRegions = new HashSet<>();
+		setContainingRegions(intersectionEdgeList, rideRegions);
+		setContainingRegions(intersectionNodeList, rideRegions);
 		ridePersistenceService.saveIntersectionsLists(intersectionNodeList, intersectionEdgeList);
+		for (Long regionId : rideRegions) {
+			Region ref = new Region();
+			ref.setId(regionId);
+			ride.getRegions().add(ref);
+		}
+		ridePersistenceService.saveRide(ride); // Save regions of ride
 	}
 
 	private List<MatchedPoint> getEnrichedPoints(Ride ride, TraceResponse traceResponse)
@@ -693,7 +699,7 @@ public class RideProcessorService {
 		setWaitingTimesAndMedianSpeed(intersectionEdgeList, medianSpeed);
 	}
 
-	public void setContainingRegions(List<? extends IntersectionBase> intersections) {
+	public void setContainingRegions(List<? extends IntersectionBase> intersections, Set<Long> rideRegions) {
 		int number_of_elements = intersections.size();
 		if (number_of_elements > 0) {
 			Long[] ids = new Long[number_of_elements];
@@ -714,7 +720,12 @@ public class RideProcessorService {
 				Long regionId = match[1];
 				Region ref = new Region();
 				ref.setId(regionId);
-				intersections.get(edgeId).getRegions().add(ref);
+				if (intersections.get(edgeId).getSmallestRegion() == null) {
+					// The first region is the smallest region, all other regions are
+					// ignored
+					intersections.get(edgeId).setSmallestRegion(ref);
+				}
+				rideRegions.add(regionId);
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import com.simra.konsumgandalf.common.models.entities.IntersectionEdge;
 import com.simra.konsumgandalf.common.models.entities.IntersectionNode;
 import com.simra.konsumgandalf.common.models.entities.PlanetOsmLine;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 public class IntersectionEdgeSpecifications {
@@ -35,6 +36,18 @@ public class IntersectionEdgeSpecifications {
 
 					nextValhallaEdgeId == null ? cb.isNull(root.get("nextValhallaEdgeId"))
 							: cb.equal(root.get("nextValhallaEdgeId"), nextValhallaEdgeId));
+		};
+	}
+
+	public static Specification<IntersectionEdge> fetchOsmLines() {
+		return (root, query, cb) -> {
+			// Only fetch if this is a data fetch query (skips count queries)
+			if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
+				root.fetch("osmLine", JoinType.LEFT);
+				root.fetch("nextOsmLine", JoinType.LEFT);
+				root.fetch("prevOsmLine", JoinType.LEFT);
+			}
+			return null;
 		};
 	}
 

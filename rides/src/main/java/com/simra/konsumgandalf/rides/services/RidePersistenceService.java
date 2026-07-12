@@ -1,17 +1,15 @@
 package com.simra.konsumgandalf.rides.services;
 
+import com.simra.konsumgandalf.common.logging.LogExecutionTime;
 import com.simra.konsumgandalf.common.logging.LogExecutionTimeSubTask;
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
 import com.simra.konsumgandalf.common.models.entities.*;
-import com.simra.konsumgandalf.rides.repositories.IntersectionBaseRepository;
-import com.simra.konsumgandalf.rides.repositories.MatchedPointRepository;
-import com.simra.konsumgandalf.rides.repositories.RidePointRepository;
-import com.simra.konsumgandalf.rides.repositories.RideRepository;
+import com.simra.konsumgandalf.rides.repositories.*;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,24 +17,26 @@ import java.util.Date;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class RidePersistenceService {
 
 	private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-	@Autowired
-	private RideRepository rideRepository;
+	private final RideRepository rideRepository;
 
-	@Autowired
-	private RidePointRepository ridePointRepository;
+	private final RidePointRepository ridePointRepository;
 
-	@Autowired
-	private MatchedPointRepository matchedPointRepository;
+	private final MatchedPointRepository matchedPointRepository;
 
-	@Autowired
-	private IntersectionBaseRepository intersectionBaseRepository;
+	private final IntersectionBaseRepository intersectionBaseRepository;
 
-	RidePersistenceService() {
-	}
+	private final IntersectionNodeMetricsRepository intersectionNodeMetricsRepository;
+
+	private final IntersectionEdgeMetricsRepository intersectionEdgeMetricsRepository;
+
+	private final IntersectionRegionMetricsRepository intersectionRegionMetricsRepository;
+
+	private final IntersectionRideRegionMetricsRepository intersectionRideRegionMetricsRepository;
 
 	@LogExecutionTimeSubTask
 	@Transactional
@@ -102,6 +102,14 @@ public class RidePersistenceService {
 		for (int i = 0; i < ridePointList.size(); i++) {
 			ride.getCoordinates().get(i).setRidePointId(ridePointList.get(i).getId());
 		}
+	}
+
+	@LogExecutionTime
+	public void updateIntersectionMetrics() {
+		intersectionNodeMetricsRepository.updateIntersectionNodeMetrics();
+		intersectionEdgeMetricsRepository.updateIntersectionEdgeMetrics();
+		intersectionRegionMetricsRepository.updateIntersectionRegionMetrics();
+		intersectionRideRegionMetricsRepository.updateIntersectionRideRegionMetrics();
 	}
 
 }

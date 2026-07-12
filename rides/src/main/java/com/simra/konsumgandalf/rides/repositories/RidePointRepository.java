@@ -10,14 +10,11 @@ import java.util.List;
 @Repository
 public interface RidePointRepository extends JpaRepository<RidePoint, Long> {
 
-	List<RidePoint> findByRideId(Long rideId);
-
 	@Query(value = """
 				SELECT r FROM RidePoint r
-			    JOIN r.matchedPoint m
-			    JOIN m.intersections i
-			    WHERE i.id = :intersectionBaseId
+			    JOIN FETCH r.ride
+			    WHERE r.ride.id = :rideId
 			""")
-	List<RidePoint> findByIntersectionBaseId(Long intersectionBaseId);
+	List<RidePoint> findByRideId(Long rideId);
 
 }

@@ -82,6 +82,7 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 			    SELECT region.id
 			    FROM region
 			    WHERE region.way && input_point AND ST_COVERS(region.way, input_point)
+				ORDER BY region.admin_level DESC -- Important to get smallest region first
 			) r
 			    """, nativeQuery = true)
 	List<Long[]> findContainingRegions(@Param("ids") Long[] ids, @Param("lngs") Double[] lngs,
@@ -114,6 +115,73 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 			    );
 			""", nativeQuery = true)
 	void saveRegions();
+
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    UPDATE region child
+			    SET parent_id = parent.id
+			    FROM region parent
+			    WHERE ST_Contains(parent.way, child.way)
+			      AND parent.id != child.id
+			      AND parent.admin_level < child.admin_level
+			      AND NOT EXISTS (
+			          -- Ensure this is the IMMEDIATE parent, not a grandparent
+			          SELECT 1
+			          FROM region intermediate
+			          WHERE intermediate.id != child.id
+			            AND intermediate.id != parent.id
+			            AND intermediate.admin_level > parent.admin_level
+			            AND intermediate.admin_level < child.admin_level
+			            AND ST_Contains(parent.way, intermediate.way)
+			            AND ST_Contains(intermediate.way, child.way)
+			      );
+			""", nativeQuery = true)
+	void updateRegionHierarchy();
+
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    WITH RECURSIVE region_lineage AS (
+			        -- Anchor member: Start with top-level roots (e.g., Germany / admin_level = 2)
+			        SELECT
+			            id,
+			            parent_id,
+			            -- Format the label safely and cast it directly to an ltree
+			            ('r_' || ABS(id))::ltree AS calculated_path
+			        FROM region
+			        WHERE parent_id IS NULL
+
+			        UNION ALL
+
+			        -- Recursive member: Link children to their processed parents
+			        SELECT
+			            child.id,
+			            child.parent_id,
+			            -- Append the child's formatted ID to the parent's accumulated path
+			            parent.calculated_path || ('r_' || ABS(child.id))::ltree
+			        FROM region child
+			        JOIN region_lineage parent ON child.parent_id = parent.id
+			    )
+			    -- Push the computed paths back into the real physical column
+			    UPDATE region r
+			    SET ltree_path = rl.calculated_path
+			    FROM region_lineage rl
+			    WHERE r.id = rl.id;
+			""", nativeQuery = true)
+	void updateLtreePaths();
+
+	@Query(value = """
+			SELECT r.*
+			FROM Region r
+			WHERE EXISTS(
+			    SELECT 1
+			    FROM intersection_region_metrics i
+			    WHERE i.region_id = r.id
+			)
+			ORDER BY r.admin_level
+			""", nativeQuery = true)
+	List<Region> findAllWithRidesOrderByAdminLevel();
 
 	@Query(value = """
 			SELECT * FROM Region WHERE (:name IS NULL OR :name = name)

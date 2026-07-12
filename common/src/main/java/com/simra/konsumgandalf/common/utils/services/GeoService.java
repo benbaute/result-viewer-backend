@@ -1,47 +1,18 @@
 package com.simra.konsumgandalf.common.utils.services;
 
 import com.simra.konsumgandalf.common.models.classes.MatchInformation;
-import com.simra.konsumgandalf.common.models.interfaces.FeatureMappable;
-import com.simra.konsumgandalf.common.models.interfaces.PropertiesMappable;
 import org.geotools.referencing.GeodeticCalculator;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class GeoService {
-
-	private static Map<String, Object> createFeatureCollection(List<Map<String, Object>> features) {
-		return Map.of("type", "FeatureCollection", "features", features);
-	}
-
-	public static Map<String, Object> getFeatureCollection(List<? extends FeatureMappable> elements) {
-		return createFeatureCollection(elements.stream().map(FeatureMappable::getFeatureMap).toList());
-	}
-
-	public static Map<String, Object> getPageableMap(Page<?> page, String key, Object value) {
-		return Map.of("metadata", Map.of("totalElements", page.getTotalElements(), "totalPages", page.getTotalPages(),
-				"currentPage", page.getNumber()), key, value);
-	}
-
-	public static Map<String, Object> getFeatureCollectionPageable(Page<? extends FeatureMappable> page) {
-		return getPageableMap(page, "geoData", getFeatureCollection(page.getContent()));
-	}
-
-	public static List<Map<String, Object>> getPropertiesCollection(List<? extends PropertiesMappable> elements) {
-		return elements.stream().map(PropertiesMappable::getProperties).toList();
-	}
-
-	public static Map<String, Object> getPropertiesCollectionPageable(Page<? extends PropertiesMappable> page) {
-		return getPageableMap(page, "properties", getPropertiesCollection(page.getContent()));
-	}
 
 	public double calculateAverage(List<Double> values) {
 		double sum = 0.0;

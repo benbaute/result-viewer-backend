@@ -74,6 +74,14 @@ BEGIN
 END;
 ' LANGUAGE plpgsql IMMUTABLE;
 
+--- Make ltree function available
+CREATE OR REPLACE FUNCTION str_to_ltree_is_ancestor(child_path ltree, parent_path text)
+    RETURNS boolean AS '
+BEGIN
+    RETURN child_path::ltree <@ parent_path::ltree;
+END;
+' LANGUAGE plpgsql IMMUTABLE STRICT;
+
 --- Set Indexes for the analyticsServices
 CREATE INDEX IF NOT EXISTS idx_region_way_gist ON region USING GIST (way);
 CREATE INDEX IF NOT EXISTS idx_simra_region_way_gist ON simra_region USING GIST (way);
@@ -83,6 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_ride_entity_way_gist ON ride_entity USING GIST (w
 CREATE INDEX IF NOT EXISTS traffic_signal_geom25833_idx ON traffic_signal USING GIST (geom25833);
 CREATE INDEX IF NOT EXISTS traffic_signal_cluster_geom_3857_idx ON traffic_signal_cluster USING GIST (geom3857);
 CREATE INDEX IF NOT EXISTS region_geom_3857_idx ON region USING GIST (geom3857);
+CREATE INDEX IF NOT EXISTS idx_region_ltree_path ON region USING gist (ltree_path);
 
 CREATE INDEX IF NOT EXISTS idx_intersection__matched_points_m ON intersection__matched_points (matched_point_id);
 CREATE INDEX IF NOT EXISTS idx_intersection__matched_points_i ON intersection__matched_points (intersection_id);
@@ -466,6 +475,7 @@ SELECT
     agg.traffic_time,
     agg.year,
 
+    example_base.smallest_region AS smallest_region,
     example_base.geom AS geom,
     example_id,
     -- global_example_id,
@@ -554,6 +564,7 @@ SELECT
     agg.traffic_time,
     agg.year,
 
+    example_base.smallest_region AS smallest_region,
     example_base.geom AS geom,
     example_id,
     global_example_id,
@@ -622,182 +633,226 @@ CREATE INDEX IF NOT EXISTS idx_intersection_node_time ON intersection_node_metri
 CREATE INDEX IF NOT EXISTS idx_intersection_node_metrics_geom4326 ON intersection_node_metrics USING GIST (geom);
 
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics_smallest_regions AS
 WITH edges AS (
     SELECT
-        ir.region_id,
+        base.smallest_region,
         COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
         COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_edges,
-        COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
         SUM(length) / 1000.0                                           AS edge_length_km,
         SUM(duration)                                                  AS edge_duration,
-        SUM(waiting_time)                                              AS edge_waiting_time,
-        AVG(waiting_time)                                              AS edge_avg_waiting_time,
-        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS edge_stop_rate,
-        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS edge_avg_waiting_when_stopped
+        SUM(waiting_time)                                                   AS edge_waiting_time,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0)           AS edge_stop_count,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)  AS edge_stop_time
     FROM intersection_edge edge
     JOIN intersection_base base ON edge.id = base.id
-    JOIN intersection__region ir ON base.id = ir.intersection_id
     GROUP BY GROUPING SETS (
-        (ir.region_id),
-        (ir.region_id, year),
-        (ir.region_id, traffic_time),
-        (ir.region_id, traffic_time, year),
-        (ir.region_id, week_day),
-        (ir.region_id, week_day, year),
-        (ir.region_id, week_day, traffic_time),
-        (ir.region_id, week_day, traffic_time, year)
+        (base.smallest_region),
+        (base.smallest_region, year),
+        (base.smallest_region, traffic_time),
+        (base.smallest_region, traffic_time, year),
+        (base.smallest_region, week_day),
+        (base.smallest_region, week_day, year),
+        (base.smallest_region, week_day, traffic_time),
+        (base.smallest_region, week_day, traffic_time, year)
     )
 ), nodes AS (
     SELECT
-        ir.region_id,
+        base.smallest_region,
         COALESCE(week_day, 'ALL_WEEK')                                 AS week_day,     -- aggregation name for week
         COALESCE(traffic_time, 'ALL_DAY')                              AS traffic_time, -- aggregation name for traffic time
         COALESCE(year, 2000)                                           AS year,         -- aggregation number for years
         COUNT(*)                                                       AS number_of_nodes,
-        COUNT(DISTINCT base.ride_id)                                   AS number_of_rides,
         SUM(length) / 1000.0                                           AS node_length_km,
         SUM(duration)                                                  AS node_duration,
         SUM(waiting_time)                                              AS node_waiting_time,
-        AVG(waiting_time)                                              AS node_avg_waiting_time,
-        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS node_stop_rate,
-        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS node_avg_waiting_when_stopped
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0)           AS node_stop_count,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)  AS node_stop_time
     FROM intersection_node node
     JOIN intersection_base base ON node.id = base.id
-    JOIN intersection__region ir ON base.id = ir.intersection_id
     GROUP BY GROUPING SETS (
-        (ir.region_id),
-        (ir.region_id, year),
-        (ir.region_id, traffic_time),
-        (ir.region_id, traffic_time, year),
-        (ir.region_id, week_day),
-        (ir.region_id, week_day, year),
-        (ir.region_id, week_day, traffic_time),
-        (ir.region_id, week_day, traffic_time, year)
+        (base.smallest_region),
+        (base.smallest_region, year),
+        (base.smallest_region, traffic_time),
+        (base.smallest_region, traffic_time, year),
+        (base.smallest_region, week_day),
+        (base.smallest_region, week_day, year),
+        (base.smallest_region, week_day, traffic_time),
+        (base.smallest_region, week_day, traffic_time, year)
     )
 )
 SELECT
-    row_number() OVER () AS id,
-    region.id AS region_id,
+    n.smallest_region,
     n.week_day,
     n.traffic_time,
     n.year,
-    way AS geom,
-    name,
-    admin_level,
-    e.number_of_rides,
-
-    edge_length_km + node_length_km AS length_km,
-    edge_duration + node_duration AS duration,
     
     e.number_of_edges,
     e.edge_length_km,
     e.edge_duration,
     e.edge_waiting_time,
-    e.edge_avg_waiting_time,
-    e.edge_avg_waiting_when_stopped,
-    e.edge_stop_rate,
-
-    edge_waiting_time / (edge_length_km + node_length_km) AS edge_waiting_s_per_km,
-    100::float8 * edge_waiting_time / (edge_duration + node_duration) AS edge_waiting_rate,
+    e.edge_stop_count,
+    e.edge_stop_time,
 
     n.number_of_nodes,
     n.node_length_km,
     n.node_duration,
     n.node_waiting_time,
-    n.node_avg_waiting_time,
-    n.node_avg_waiting_when_stopped,
-    n.node_stop_rate,
+    n.node_stop_count,
+    n.node_stop_time
 
-    node_waiting_time / (edge_length_km + node_length_km) AS node_waiting_s_per_km,
-    100::float8 * node_waiting_time / (edge_duration + node_duration) AS node_waiting_rate
-
-FROM region
-JOIN nodes n ON region.id = n.region_id
-JOIN edges e ON region.id = e.region_id
+FROM nodes n
+JOIN edges e ON n.smallest_region = e.smallest_region
 AND n.week_day = e.week_day
 AND n.traffic_time = e.traffic_time
 AND n.year = e.year
 ;
+CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_smallest_regions_id ON intersection_region_metrics_smallest_regions (smallest_region);
+CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_smallest_regions_time ON intersection_region_metrics_smallest_regions (week_day, traffic_time, year);
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_ride_counts_metrics AS
+SELECT
+    rr.region_id,
+    COALESCE(base.week_day, 'ALL_WEEK')     AS week_day,
+    COALESCE(base.traffic_time, 'ALL_DAY')  AS traffic_time,
+    COALESCE(base.year, 2000)               AS year,
+    COUNT(DISTINCT rr.ride_id)              AS number_of_rides
+FROM ride__region rr
+JOIN intersection_base base ON rr.ride_id = base.ride_id
+GROUP BY GROUPING SETS (
+    (rr.region_id),
+    (rr.region_id, year),
+    (rr.region_id, traffic_time),
+    (rr.region_id, traffic_time, year),
+    (rr.region_id, week_day),
+    (rr.region_id, week_day, year),
+    (rr.region_id, week_day, traffic_time),
+    (rr.region_id, week_day, traffic_time, year)
+);
+CREATE INDEX IF NOT EXISTS idx_reg_ride_counts_perf
+    ON intersection_region_ride_counts_metrics (region_id, week_day, traffic_time, year);
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_region_metrics AS
+SELECT row_number() OVER () AS id, c.week_day, c.traffic_time, c.year,
+       r.id AS region_id, c.number_of_rides,
+       number_of_edges, edge_length_km, edge_duration, edge_waiting_time, edge_stop_count, edge_stop_time,
+       number_of_nodes, node_length_km, node_duration, node_waiting_time, node_stop_count, node_stop_time
+FROM region r
+JOIN (
+    SELECT combined.id, week_day, traffic_time, year,
+        SUM(number_of_edges) AS number_of_edges, SUM(edge_length_km) AS edge_length_km,
+        SUM(edge_duration) AS edge_duration, SUM(edge_waiting_time) AS edge_waiting_time,
+        SUM(edge_stop_count) AS edge_stop_count,  SUM(edge_stop_time) AS edge_stop_time,
+        SUM(number_of_nodes) AS number_of_nodes, SUM(node_length_km) AS node_length_km,
+        SUM(node_duration) AS node_duration, SUM(node_waiting_time) AS node_waiting_time,
+        SUM(node_stop_count) AS node_stop_count,  SUM(node_stop_time) AS node_stop_time
+    FROM region combined
+    JOIN (
+        SELECT *
+        FROM intersection_region_metrics_smallest_regions i
+        JOIN region r ON r.id = i.smallest_region
+    ) small
+    ON small.ltree_path <@ combined.ltree_path
+    GROUP BY combined.id, week_day, traffic_time, year
+) agg ON agg.id = r.id
+JOIN intersection_region_ride_counts_metrics c
+ON c.region_id = r.id
+    AND c.year = agg.year
+    AND c.week_day = agg.week_day
+    AND c.traffic_time = agg.traffic_time;
 CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_id ON intersection_region_metrics (region_id);
 CREATE INDEX IF NOT EXISTS idx_intersection_region_metrics_time ON intersection_region_metrics (week_day, traffic_time, year);
 
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_ride_region_metrics AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_ride_region_metrics_smallest_regions AS
 WITH edges AS (
     SELECT
-        ir.region_id,
+        base.smallest_region,
         base.ride_id,
-        MIN(base.id)                                                   AS first_id,
-        COUNT(*)                                                       AS number_of_edges,
-        SUM(length) / 1000.0                                             AS edge_length_km,
-        SUM(duration)                                                  AS edge_duration,
-        SUM(waiting_time)                                              AS edge_waiting_time,
-        AVG(waiting_time)                                              AS edge_avg_waiting_time,
-        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS edge_stop_rate,
-        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS edge_avg_waiting_when_stopped
+        MIN(base.id)                                                        AS first_id,
+        COUNT(*)                                                            AS number_of_edges,
+        SUM(length) / 1000.0                                                AS edge_length_km,
+        SUM(duration)                                                       AS edge_duration,
+        SUM(waiting_time)                                                   AS edge_waiting_time,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0)           AS edge_stop_count,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)  AS edge_stop_time
     FROM intersection_edge edge
     JOIN intersection_base base ON edge.id = base.id
-    JOIN intersection__region ir ON base.id = ir.intersection_id
-    GROUP BY ir.region_id, base.ride_id
+    GROUP BY base.smallest_region, base.ride_id
 ), nodes AS (
     SELECT
-        ir.region_id,
+        base.smallest_region,
         base.ride_id,
-        COUNT(*)                                                       AS number_of_nodes,
-        SUM(length) / 1000                                             AS node_length_km,
-        SUM(duration)                                                  AS node_duration,
-        SUM(waiting_time)                                              AS node_waiting_time,
-        AVG(waiting_time)                                              AS node_avg_waiting_time,
-        100::float8 * COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0) / COUNT(*) AS node_stop_rate,
-        COALESCE(AVG(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)::float8 AS node_avg_waiting_when_stopped
+        COUNT(*)                                                            AS number_of_nodes,
+        SUM(length) / 1000                                                  AS node_length_km,
+        SUM(duration)                                                       AS node_duration,
+        SUM(waiting_time)                                                   AS node_waiting_time,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN 1.0 END), 0)           AS node_stop_count,
+        COALESCE(SUM(CASE WHEN waiting_time > 3 THEN waiting_time END), 0)  AS node_stop_time
     FROM intersection_node node
     JOIN intersection_base base ON node.id = base.id
-    JOIN intersection__region ir ON base.id = ir.intersection_id
-    GROUP BY ir.region_id, base.ride_id
+    GROUP BY base.smallest_region, base.ride_id
 )
 SELECT
-    row_number() OVER () AS id,
-    region.id AS region_id,
+    e.first_id,
+    e.smallest_region,
     e.ride_id,
     b.start_time,
     b.week_day,
     b.traffic_time, -- TODO: Selects traffic time based on first id, other function may be better
     b.year,
-    name,
-    admin_level,
 
-    edge_length_km + COALESCE(node_length_km, 0) AS length_km,
-    edge_duration + COALESCE(node_duration, 0) AS duration,
     b.median_speed AS median_ride_speed,
 
     e.number_of_edges,
     e.edge_length_km,
     e.edge_duration,
     e.edge_waiting_time,
-    e.edge_avg_waiting_time,
-    e.edge_avg_waiting_when_stopped,
-    e.edge_stop_rate,
-
-    edge_waiting_time / (edge_length_km + COALESCE(node_length_km, 0)) AS edge_waiting_s_per_km,
-    100 * edge_waiting_time / (edge_duration + COALESCE(node_duration, 0)) AS edge_waiting_rate,
+    e.edge_stop_count,
+    e.edge_stop_time,
 
     COALESCE(n.number_of_nodes, 0)::float8                  AS number_of_nodes,
     COALESCE(n.node_length_km, 0)::float8                   AS node_length_km,
     COALESCE(n.node_duration, 0)::float8                    AS node_duration,
     COALESCE(n.node_waiting_time, 0)::float8                AS node_waiting_time,
-    COALESCE(n.node_avg_waiting_time, 0)::float8            AS node_avg_waiting_time,
-    COALESCE(n.node_avg_waiting_when_stopped, 0)::float8    AS node_avg_waiting_when_stopped,
-    COALESCE(n.node_stop_rate, 0)::float8                   AS node_stop_rate,
+    COALESCE(n.node_stop_count, 0)::float8                  AS node_stop_count,
+    COALESCE(n.node_stop_time, 0)::float8                   AS node_stop_time
 
-    COALESCE(node_avg_waiting_time / (edge_length_km + node_length_km), 0)::float8  AS node_waiting_s_per_km,
-    COALESCE(100 * node_waiting_time / (edge_duration + node_duration), 0)::float8  AS node_waiting_rate
 FROM region
-JOIN edges e ON region.id = e.region_id  -- Full Join, only include rows with at least one edge
-LEFT JOIN nodes n ON region.id = n.region_id AND n.ride_id = e.ride_id -- Nodes not required
+JOIN edges e ON region.id = e.smallest_region  -- Full Join, only include rows with at least one edge
+LEFT JOIN nodes n ON region.id = n.smallest_region AND n.ride_id = e.ride_id -- Nodes not required
 JOIN intersection_base b ON b.id = e.first_id
 ;
+CREATE UNIQUE INDEX IF NOT EXISTS intersection_ride_region_metrics_smallest_regions_pk
+    ON intersection_ride_region_metrics_smallest_regions (smallest_region, ride_id);
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS intersection_ride_region_metrics AS
+SELECT row_number() OVER () AS id, b.week_day, b.traffic_time, b.year,
+       agg.id AS region_id, agg.ride_id, b.start_time, b.median_speed,
+       number_of_edges, edge_length_km, edge_duration, edge_waiting_time, edge_stop_count, edge_stop_time,
+       number_of_nodes, node_length_km, node_duration, node_waiting_time, node_stop_count, node_stop_time
+FROM (
+    SELECT combined.id, ride_id, MIN(small.first_id) AS first_id,
+       SUM(number_of_edges) AS number_of_edges, SUM(edge_length_km) AS edge_length_km,
+       SUM(edge_duration) AS edge_duration, SUM(edge_waiting_time) AS edge_waiting_time,
+       SUM(edge_stop_count) AS edge_stop_count,  SUM(edge_stop_time) AS edge_stop_time,
+       SUM(number_of_nodes) AS number_of_nodes, SUM(node_length_km) AS node_length_km,
+       SUM(node_duration) AS node_duration, SUM(node_waiting_time) AS node_waiting_time,
+       SUM(node_stop_count) AS node_stop_count,  SUM(node_stop_time) AS node_stop_time
+    FROM region combined
+    JOIN (
+        SELECT *
+        FROM intersection_ride_region_metrics_smallest_regions i
+        JOIN region r ON r.id = i.smallest_region
+    ) small
+    ON small.ltree_path <@ combined.ltree_path
+    GROUP BY combined.id, ride_id
+) agg
+JOIN intersection_base b ON b.id = first_id;
 CREATE UNIQUE INDEX IF NOT EXISTS intersection_ride_region_metrics_pk
     ON intersection_ride_region_metrics (region_id, ride_id);

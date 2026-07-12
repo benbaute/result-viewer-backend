@@ -73,7 +73,8 @@ public class RideEntityProcessorService {
 			List<String> allPaths = allPathsStream.filter(Files::isRegularFile)
 				.filter(FileReaderService::isEntityFile)
 				.map(Path::toString)
-                .filter((path) -> !path.contains("Profiles")) // TODO: replace with directory skip
+				.filter((path) -> !path.contains("Profiles")) // TODO: replace with
+																// directory skip
 				.toList();
 
 			int batchSize = 10000;
