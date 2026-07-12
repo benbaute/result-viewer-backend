@@ -119,23 +119,20 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 	@Modifying
 	@Transactional
 	@Query(value = """
-			    UPDATE region child
-			    SET parent_id = parent.id
-			    FROM region parent
-			    WHERE ST_Contains(parent.way, child.way)
-			      AND parent.id != child.id
-			      AND parent.admin_level < child.admin_level
-			      AND NOT EXISTS (
-			          -- Ensure this is the IMMEDIATE parent, not a grandparent
-			          SELECT 1
-			          FROM region intermediate
-			          WHERE intermediate.id != child.id
-			            AND intermediate.id != parent.id
-			            AND intermediate.admin_level > parent.admin_level
-			            AND intermediate.admin_level < child.admin_level
-			            AND ST_Contains(parent.way, intermediate.way)
-			            AND ST_Contains(intermediate.way, child.way)
-			      );
+			     WITH immediate_parents AS (
+			        SELECT DISTINCT ON (child.id)
+			            child.id AS child_id,
+			            parent.id AS parent_id
+			        FROM region child
+			        JOIN region parent ON ST_Contains(parent.way, child.way)
+			        WHERE parent.id != child.id
+			          AND parent.admin_level < child.admin_level
+			        ORDER BY child.id, parent.admin_level DESC
+			    )
+			    UPDATE region r
+			    SET parent_id = ip.parent_id
+			    FROM immediate_parents ip
+			    WHERE r.id = ip.child_id;
 			""", nativeQuery = true)
 	void updateRegionHierarchy();
 
